@@ -157,6 +157,6 @@ locals {
     []
   )
 
-  ec2_security_group_count = length(local.ec2_security_group_ids)
+  ec2_security_group_count         = length(local.ec2_security_group_ids)
   ec2_security_group_rules_product = local.ec2_security_group_count * local.generated_ec2_security_group_rule_count
 }

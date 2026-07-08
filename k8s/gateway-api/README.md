@@ -1,5 +1,25 @@
 # Gateway API CRDs and Controller
 
+CloudRoute Lab uses Gateway API with Envoy Gateway. It does not use Ingress or ingress-nginx.
+
+External traffic path:
+
+```text
+NGINX EC2 -> worker nodePort 30080 -> Envoy Gateway -> HTTPRoute -> ClusterIP Services
+```
+
+Apply order:
+
+```bash
+kubectl apply -f k8s/app/namespace.yaml
+kubectl apply -f k8s/gateway-api/gatewayclass.yaml
+kubectl apply -f k8s/gateway-api/envoyproxy-nodeport.yaml
+kubectl apply -f k8s/gateway-api/gateway.yaml
+kubectl apply -f k8s/gateway-api/httproute.yaml
+```
+
+`envoyproxy-nodeport.yaml` configures the Envoy Gateway managed Service as `NodePort` and pins HTTP to node port `30080`. Point the external NGINX upstream at worker private IPs on this port.
+
 ## Prerequisites
 
 Gateway API requires Custom Resource Definitions (CRDs) and a Gateway controller to be installed before use.
@@ -9,11 +29,8 @@ Gateway API requires Custom Resource Definitions (CRDs) and a Gateway controller
 Envoy Gateway is lightweight and purpose-built for Gateway API.
 
 ```bash
-# Install Gateway API CRDs
-kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.2.0/config/crd/standard/gateway-crds.yaml
-
-# Install Envoy Gateway
-kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/v1.2.6/quickstart.yaml
+# Install Gateway API CRDs and Envoy Gateway with Helm
+helm install eg oci://docker.io/envoyproxy/gateway-helm --version v1.8.2 -n envoy-gateway-system --create-namespace
 
 # Verify installation
 kubectl get gatewayclass

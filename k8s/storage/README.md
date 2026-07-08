@@ -7,6 +7,7 @@ This folder contains StorageClass and PVC examples for AWS EBS dynamic provision
 | File | Purpose |
 |------|---------|
 | `gp3-storageclass.yaml` | StorageClass for gp3 EBS volumes |
+| `pvc-test.yaml` | PVC and test Pod for verifying dynamic provisioning |
 
 ## Prerequisites
 
@@ -38,6 +39,22 @@ kubectl get pods -n kube-system | grep ebs
 
 ```bash
 kubectl apply -f k8s/storage/gp3-storageclass.yaml
+```
+
+## PVC Smoke Test
+
+```bash
+kubectl apply -f k8s/app/namespace.yaml
+kubectl apply -f k8s/storage/pvc-test.yaml
+kubectl get pvc -n cloudroute-lab
+kubectl get pod gp3-test-pod -n cloudroute-lab
+kubectl logs gp3-test-pod -n cloudroute-lab
+```
+
+Clean up the smoke test after verification:
+
+```bash
+kubectl delete -f k8s/storage/pvc-test.yaml
 ```
 
 ## Verify StorageClass

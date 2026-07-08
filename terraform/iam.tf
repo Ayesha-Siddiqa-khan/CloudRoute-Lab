@@ -52,9 +52,9 @@ resource "aws_iam_policy" "github_actions_ecr_push" {
         Resource = "*"
       },
       {
-        Sid    = "AllowPushToSelectedRepository"
-        Effect = "Allow"
-        Action = ["ecr:BatchCheckLayerAvailability","ecr:CompleteLayerUpload","ecr:InitiateLayerUpload","ecr:PutImage","ecr:UploadLayerPart","ecr:BatchGetImage","ecr:GetDownloadUrlForLayer"]
+        Sid      = "AllowPushToSelectedRepository"
+        Effect   = "Allow"
+        Action   = ["ecr:BatchCheckLayerAvailability", "ecr:CompleteLayerUpload", "ecr:InitiateLayerUpload", "ecr:PutImage", "ecr:UploadLayerPart", "ecr:BatchGetImage", "ecr:GetDownloadUrlForLayer"]
         Resource = local.ecr_repository_arns
       }
     ]
@@ -107,9 +107,9 @@ resource "aws_iam_policy" "worker_ec2_ecr_pull" {
         Resource = "*"
       },
       {
-        Sid    = "AllowPullFromSelectedRepository"
-        Effect = "Allow"
-        Action = ["ecr:BatchCheckLayerAvailability","ecr:BatchGetImage","ecr:GetDownloadUrlForLayer"]
+        Sid      = "AllowPullFromSelectedRepository"
+        Effect   = "Allow"
+        Action   = ["ecr:BatchCheckLayerAvailability", "ecr:BatchGetImage", "ecr:GetDownloadUrlForLayer"]
         Resource = local.ecr_repository_arns
       }
     ]
@@ -165,9 +165,9 @@ resource "aws_iam_policy" "terrapilot_ec2_ecr_pull" {
         Resource = "*"
       },
       {
-        Sid    = "AllowPullFromSelectedRepository"
-        Effect = "Allow"
-        Action = ["ecr:BatchCheckLayerAvailability","ecr:BatchGetImage","ecr:GetDownloadUrlForLayer"]
+        Sid      = "AllowPullFromSelectedRepository"
+        Effect   = "Allow"
+        Action   = ["ecr:BatchCheckLayerAvailability", "ecr:BatchGetImage", "ecr:GetDownloadUrlForLayer"]
         Resource = local.ecr_repository_arns
       }
     ]
@@ -211,8 +211,8 @@ locals {
   role_policy_attachments = flatten([
     for role in var.iam_roles : [
       for policy_arn in role.attached_policies : {
-        role_name   = role.name
-        policy_arn  = policy_arn
+        role_name  = role.name
+        policy_arn = policy_arn
       }
     ]
   ])

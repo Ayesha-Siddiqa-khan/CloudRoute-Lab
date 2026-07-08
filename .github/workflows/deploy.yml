@@ -43,7 +43,6 @@ jobs:
           push: true
           tags: |
             ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_FRONTEND }}:${{ github.sha }}
-            ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_FRONTEND }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -54,7 +53,6 @@ jobs:
           push: true
           tags: |
             ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_BACKEND }}:${{ github.sha }}
-            ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_BACKEND }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

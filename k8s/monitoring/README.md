@@ -1,6 +1,6 @@
 # Monitoring Stack
 
-This folder contains raw Kubernetes manifests for Prometheus, Grafana, Node Exporter, and Fluent Bit.
+This folder contains raw Kubernetes manifests for Prometheus, Grafana, Node Exporter, and Fluent Bit. Fluent Bit sends Kubernetes container logs to AWS CloudWatch Logs using the EC2 worker node IAM role.
 
 ## Components
 
@@ -15,7 +15,8 @@ This folder contains raw Kubernetes manifests for Prometheus, Grafana, Node Expo
 
 - Kubernetes cluster running
 - kubectl configured
-- Gateway API CRDs installed (for traffic routing)
+- Terraform applied so the worker EC2 role has CloudWatch Logs permissions
+- Gateway API CRDs installed separately for app traffic routing
 
 ## Install
 
@@ -41,7 +42,23 @@ kubectl apply -f k8s/monitoring/grafana-datasources.yaml
 kubectl apply -f k8s/monitoring/fluent-bit-configmap.yaml
 ```
 
-### 4. Apply Deployments and Services
+### 4. Create Grafana Secret
+
+```bash
+cp k8s/monitoring/grafana-secret.example.yaml k8s/monitoring/grafana-secret.yaml
+# edit k8s/monitoring/grafana-secret.yaml
+kubectl apply -f k8s/monitoring/grafana-secret.yaml
+```
+
+### 5. Apply Fluent Bit RBAC
+
+```bash
+kubectl apply -f k8s/monitoring/fluent-bit-serviceaccount.yaml
+kubectl apply -f k8s/monitoring/fluent-bit-clusterrole.yaml
+kubectl apply -f k8s/monitoring/fluent-bit-clusterrolebinding.yaml
+```
+
+### 6. Apply Deployments and Services
 
 ```bash
 kubectl apply -f k8s/monitoring/prometheus-deployment.yaml
@@ -50,18 +67,14 @@ kubectl apply -f k8s/monitoring/grafana-deployment.yaml
 kubectl apply -f k8s/monitoring/grafana-service.yaml
 ```
 
-### 5. Apply DaemonSets
+### 7. Apply DaemonSets
 
 ```bash
 kubectl apply -f k8s/monitoring/node-exporter-daemonset.yaml
 kubectl apply -f k8s/monitoring/fluent-bit-daemonset.yaml
 ```
 
-### Apply All at Once
-
-```bash
-kubectl apply -f k8s/monitoring/
-```
+Avoid `kubectl apply -f k8s/monitoring/` until you have copied and edited `grafana-secret.example.yaml`; the deployment expects a real `grafana-admin` Secret.
 
 ## Verify
 
@@ -112,7 +125,7 @@ Open: http://localhost:3000
 
 Login:
 - Username: `admin`
-- Password: `cloudroute-admin`
+- Password: value from your local `grafana-admin` Secret
 
 ## How It Works
 
@@ -140,8 +153,16 @@ Login:
 
 - Runs on **every node** in the cluster
 - Reads container logs from `/var/log/containers/`
-- Parses logs and outputs to stdout (configurable)
-- Can be extended to send to CloudWatch, Elasticsearch, or Loki
+- Parses logs and enriches them with Kubernetes metadata
+- Sends logs to CloudWatch log group `/cloudroute-lab/dev/kubernetes/containers`
+- Uses the EC2 worker node IAM role; no AWS credentials are stored in YAML
+
+Check CloudWatch delivery:
+
+```bash
+kubectl logs -n monitoring daemonset/fluent-bit
+aws logs describe-log-streams --log-group-name /cloudroute-lab/dev/kubernetes/containers --region us-east-1
+```
 
 ## DaemonSet Explanation
 

@@ -171,18 +171,18 @@ output "github_actions_role_arn" {
 output "github_actions_variables" {
   description = "GitHub Actions variables for OIDC and ECR deployment"
   value = {
-    AWS_REGION         = var.region
-    AWS_ACCOUNT_ID     = data.aws_caller_identity.current.account_id
-    AWS_ROLE_ARN       = aws_iam_role.github_actions_oidc.arn
-    ECR_REGISTRY       = split("/", local.backend_ecr_repository_url)[0]
-    FRONTEND_IMAGE_NAME = var.ecr_repository_name_2
-    BACKEND_IMAGE_NAME = var.ecr_repository_name_1
-    ECR_REPOSITORY_BACKEND = var.ecr_repository_name_1
-    ECR_REPOSITORY_FRONTEND = var.ecr_repository_name_2
-    BACKEND_ECR_REPOSITORY_URL = local.backend_ecr_repository_url
+    AWS_REGION                  = var.region
+    AWS_ACCOUNT_ID              = data.aws_caller_identity.current.account_id
+    AWS_ROLE_ARN                = aws_iam_role.github_actions_oidc.arn
+    ECR_REGISTRY                = split("/", local.backend_ecr_repository_url)[0]
+    FRONTEND_IMAGE_NAME         = var.ecr_repository_name_2
+    BACKEND_IMAGE_NAME          = var.ecr_repository_name_1
+    ECR_REPOSITORY_BACKEND      = var.ecr_repository_name_1
+    ECR_REPOSITORY_FRONTEND     = var.ecr_repository_name_2
+    BACKEND_ECR_REPOSITORY_URL  = local.backend_ecr_repository_url
     FRONTEND_ECR_REPOSITORY_URL = local.frontend_ecr_repository_url
-    GITHUB_REPOSITORY  = var.github_repository
-    GITHUB_BRANCH      = var.github_branch
+    GITHUB_REPOSITORY           = var.github_repository
+    GITHUB_BRANCH               = var.github_branch
   }
 }
 

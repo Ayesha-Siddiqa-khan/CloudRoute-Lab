@@ -16,9 +16,9 @@ provider "aws" {
   region = var.region
   default_tags {
     tags = {
-      Project     = "CloudRoute Lab"
-      Environment = "dev"
-      ManagedBy   = "TerraPilot"
+      Project           = "CloudRoute Lab"
+      Environment       = "dev"
+      ManagedBy         = "TerraPilot"
       TerraPilotProject = "CloudRoute Lab"
     }
   }
