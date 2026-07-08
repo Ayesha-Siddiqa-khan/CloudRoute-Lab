@@ -255,6 +255,210 @@ aws ssm delete-parameter --name "/terrapilot/CloudRoute Lab/dev/kubernetes/join-
 
 ## CloudRoute Lab Application
 
+> Current source of truth: this block reflects the checked project after the Gateway API, CloudWatch, CI/CD, and EBS/PVC cleanup. Older generated notes below are kept for historical context.
+
+CloudRoute Lab uses Next.js, FastAPI, Terraform, ECR, a self-managed Kubernetes cluster on EC2, Gateway API with Envoy Gateway, an external NGINX EC2 load balancer, Prometheus, Grafana, Fluent Bit to CloudWatch, and AWS EBS gp3 PVCs.
+
+No Ingress or ingress-nginx resources are used.
+
+### Current Traffic Flow
+
+```text
+User
+-> NGINX EC2 external load balancer on port 80
+-> Kubernetes worker NodePort 30080
+-> Envoy Gateway data plane
+-> Gateway API HTTPRoute
+-> ClusterIP Service
+-> frontend or backend Pod
+```
+
+### Current Folder Structure
+
+```text
+cloudroute-lab/
+├── .github/workflows/deploy.yml
+├── cloudroute-lab-frontend/
+├── cloudroute-lab-backend/
+├── k8s/
+│   ├── app/
+│   ├── cert-manager/
+│   ├── gateway-api/
+│   ├── monitoring/
+│   ├── storage/
+│   └── stateful-app/
+├── nginx/
+└── terraform/
+```
+
+### Terraform Validation
+
+```bash
+terraform -chdir=terraform fmt -recursive
+terraform -chdir=terraform init
+terraform -chdir=terraform validate
+terraform -chdir=terraform plan
+```
+
+Important outputs for CI/CD and operations:
+
+- `github_actions_role_arn`
+- `github_actions_variables`
+- `backend_ecr_repository_url`
+- `frontend_ecr_repository_url`
+- `kubernetes_worker_instances`
+- `gateway_http_node_port`
+- `user_data_cloudwatch_log_group`
+- `kubernetes_container_cloudwatch_log_group`
+- `postgres_backup_bucket_name`
+
+### Docker Builds
+
+```bash
+docker build -t cloudroute-lab-frontend:latest ./cloudroute-lab-frontend
+docker build -t cloudroute-lab-backend:latest ./cloudroute-lab-backend
+```
+
+### Gateway API Deployment
+
+Install Gateway API CRDs and Envoy Gateway first:
+
+```bash
+helm install eg oci://docker.io/envoyproxy/gateway-helm --version v1.8.2 -n envoy-gateway-system --create-namespace
+kubectl get gatewayclass
+kubectl get pods -n envoy-gateway-system
+```
+
+Apply CloudRoute Gateway resources:
+
+```bash
+kubectl apply -f k8s/app/namespace.yaml
+kubectl apply -f k8s/gateway-api/gatewayclass.yaml
+kubectl apply -f k8s/gateway-api/envoyproxy-nodeport.yaml
+kubectl apply -f k8s/gateway-api/gateway.yaml
+kubectl apply -f k8s/gateway-api/httproute.yaml
+```
+
+`envoyproxy-nodeport.yaml` makes Envoy Gateway reachable on worker node port `30080`, which is the port used by NGINX.
+
+### App Deployment
+
+Before manual apply, replace `REPLACE_WITH_ECR_REGISTRY` in app deployments, or let GitHub Actions patch the image names.
+
+```bash
+kubectl apply -f k8s/app/namespace.yaml
+kubectl apply -f k8s/app/configmap.yaml
+kubectl apply -f k8s/app/frontend-deployment.yaml
+kubectl apply -f k8s/app/frontend-service.yaml
+kubectl apply -f k8s/app/backend-deployment.yaml
+kubectl apply -f k8s/app/backend-service.yaml
+kubectl apply -f k8s/app/external-api.yaml
+```
+
+The direct frontend/backend NodePort manifests are optional debug-only manifests on `31080` and `31081`. They are not part of the normal external traffic path.
+
+### NGINX External Load Balancer
+
+Use [nginx/cloudroute-lab.conf.example](nginx/cloudroute-lab.conf.example) on the NGINX EC2 instance and replace `REPLACE_WITH_WORKER_PRIVATE_IP` with worker private IPs from:
+
+```bash
+terraform -chdir=terraform output kubernetes_worker_instances
+```
+
+### Monitoring And CloudWatch Logging
+
+Grafana is `ClusterIP` only. Create a local Grafana admin Secret from the example before applying Grafana:
+
+```bash
+cp k8s/monitoring/grafana-secret.example.yaml k8s/monitoring/grafana-secret.yaml
+# edit k8s/monitoring/grafana-secret.yaml
+kubectl apply -f k8s/monitoring/grafana-secret.yaml
+```
+
+Apply monitoring and logging:
+
+```bash
+kubectl apply -f k8s/monitoring/namespace.yaml
+kubectl apply -f k8s/monitoring/prometheus-serviceaccount.yaml
+kubectl apply -f k8s/monitoring/prometheus-clusterrole.yaml
+kubectl apply -f k8s/monitoring/prometheus-clusterrolebinding.yaml
+kubectl apply -f k8s/monitoring/prometheus-configmap.yaml
+kubectl apply -f k8s/monitoring/grafana-datasources.yaml
+kubectl apply -f k8s/monitoring/fluent-bit-serviceaccount.yaml
+kubectl apply -f k8s/monitoring/fluent-bit-clusterrole.yaml
+kubectl apply -f k8s/monitoring/fluent-bit-clusterrolebinding.yaml
+kubectl apply -f k8s/monitoring/fluent-bit-configmap.yaml
+kubectl apply -f k8s/monitoring/prometheus-deployment.yaml
+kubectl apply -f k8s/monitoring/prometheus-service.yaml
+kubectl apply -f k8s/monitoring/grafana-deployment.yaml
+kubectl apply -f k8s/monitoring/grafana-service.yaml
+kubectl apply -f k8s/monitoring/node-exporter-daemonset.yaml
+kubectl apply -f k8s/monitoring/fluent-bit-daemonset.yaml
+```
+
+Fluent Bit reads `/var/log/containers/*.log` and sends logs to CloudWatch log group `/cloudroute-lab/dev/kubernetes/containers` using the EC2 worker node IAM role. No AWS credentials are stored in Kubernetes YAML.
+
+### EBS And PVC
+
+Install the AWS EBS CSI Driver, then apply gp3 storage:
+
+```bash
+kubectl apply -k "github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/stable/?ref=release-1.62"
+kubectl apply -f k8s/storage/gp3-storageclass.yaml
+kubectl apply -f k8s/storage/pvc-test.yaml
+kubectl get pvc -n cloudroute-lab
+```
+
+The `gp3` StorageClass uses `WaitForFirstConsumer`, so EBS volumes are created in the same Availability Zone as the scheduled pod.
+
+### GitHub Actions CI/CD
+
+Workflow: [.github/workflows/deploy.yml](.github/workflows/deploy.yml)
+
+Required GitHub secret:
+
+- `KUBE_CONFIG_DATA`: base64 kubeconfig for the cluster. `KUBE_CONFIG` is still accepted for backward compatibility.
+
+Required GitHub variables:
+
+- `AWS_REGION`
+- `AWS_ROLE_ARN`
+- `ECR_REGISTRY`
+- `FRONTEND_IMAGE_NAME`
+- `BACKEND_IMAGE_NAME`
+
+The workflow triggers on push to `main`, builds both Docker images, pushes immutable commit SHA tags to ECR, applies app and Gateway API manifests, and verifies rollout.
+
+### Validation Commands
+
+```bash
+kubectl get pods -A
+kubectl get pods -n cloudroute-lab
+kubectl get svc -n cloudroute-lab
+kubectl get gateway -n cloudroute-lab
+kubectl get httproute -n cloudroute-lab
+kubectl get pvc -A
+kubectl get daemonset -n monitoring
+kubectl logs -n monitoring daemonset/fluent-bit
+kubectl port-forward -n monitoring svc/grafana 3000:3000
+curl http://<NGINX_PUBLIC_IP>/
+curl http://<NGINX_PUBLIC_IP>/api/status
+aws logs describe-log-streams --log-group-name /cloudroute-lab/dev/kubernetes/containers --region us-east-1
+```
+
+### Current Deployment Order
+
+1. Run Terraform validation, then apply when ready.
+2. Wait for EC2 user-data and Kubernetes bootstrap to finish.
+3. Configure GitHub variables/secrets from Terraform outputs.
+4. Install Gateway API CRDs and Envoy Gateway.
+5. Install AWS EBS CSI Driver and apply `k8s/storage/gp3-storageclass.yaml`.
+6. Apply app namespace, ConfigMap, Deployments, Services, and ExternalName.
+7. Apply `k8s/gateway-api/gatewayclass.yaml`, `envoyproxy-nodeport.yaml`, `gateway.yaml`, and `httproute.yaml`.
+8. Configure NGINX EC2 from `nginx/cloudroute-lab.conf.example`.
+9. Apply monitoring and Fluent Bit.
+10. Apply optional stateful app manifests after creating local secret files.
+
 ### Project Structure
 
 ```
@@ -489,4 +693,3 @@ kubectl get svc -n cloudroute-lab
 # Describe problematic pods
 kubectl describe pod <pod-name> -n cloudroute-lab
 ```
-
