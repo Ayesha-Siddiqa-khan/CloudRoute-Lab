@@ -208,7 +208,7 @@ output "gateway_http_node_port" {
 
 
 output "kubernetes_ingress_nlb_dns_name" {
-  description = "DNS name of the optional public Network Load Balancer for ingress-nginx"
+  description = "DNS name of the optional legacy public Network Load Balancer"
   value       = try(aws_lb.ingress_nginx[0].dns_name, null)
 }
 

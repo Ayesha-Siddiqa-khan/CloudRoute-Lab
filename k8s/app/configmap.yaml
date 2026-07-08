@@ -7,4 +7,5 @@ data:
   APP_ENV: "production"
   ALLOWED_ORIGINS: "http://cloudroute-frontend.cloudroute-lab.svc.cluster.local"
   EXTERNAL_SERVICE_ALIAS: "external-api.cloudroute-lab.svc.cluster.local"
-  NEXT_PUBLIC_API_BASE_URL: "http://cloudroute-backend.cloudroute-lab.svc.cluster.local"
+  # Empty means browser requests use the same origin, so Gateway API can route /api and /health to the backend.
+  NEXT_PUBLIC_API_BASE_URL: ""

@@ -8,11 +8,11 @@ locals {
 resource "aws_security_group" "ingress_nginx_nodeports" {
   count       = var.enable_kubernetes_ingress_nlb ? 1 : 0
   name        = substr("${local.resource_prefix}-ingress-nodeports", 0, 255)
-  description = "Allow AWS NLB traffic to ingress-nginx fixed NodePorts"
+  description = "Allow optional AWS NLB traffic to fixed Kubernetes NodePorts"
   vpc_id      = aws_vpc.main.id
 
   ingress {
-    description = "HTTP to ingress-nginx NodePort"
+    description = "HTTP to Kubernetes NodePort"
     from_port   = var.ingress_http_node_port
     to_port     = var.ingress_http_node_port
     protocol    = "tcp"
@@ -20,7 +20,7 @@ resource "aws_security_group" "ingress_nginx_nodeports" {
   }
 
   ingress {
-    description = "HTTPS to ingress-nginx NodePort"
+    description = "HTTPS to Kubernetes NodePort"
     from_port   = var.ingress_https_node_port
     to_port     = var.ingress_https_node_port
     protocol    = "tcp"
@@ -264,4 +264,3 @@ resource "aws_iam_role_policy_attachment" "worker_ec2_ebs_csi_driver" {
   role       = aws_iam_role.worker_ec2_ecr_pull.name
   policy_arn = var.ebs_csi_driver_policy_arn
 }
-

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
 interface HealthData {
   status: string;
@@ -80,7 +80,7 @@ export default function Home() {
             <div className="flex items-center gap-3">
               <span className="w-3 h-3 rounded-full bg-red-500 animate-pulse" />
               <span className="text-red-400">
-                Backend unreachable — start the FastAPI server on port 8000
+                Backend unreachable - start the FastAPI server on port 8000
               </span>
             </div>
           ) : health ? (
@@ -185,7 +185,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="text-center text-gray-600 text-sm pt-8 border-t border-gray-800">
-        CloudRoute Lab &mdash; Learn Kubernetes networking, storage & workloads
+        CloudRoute Lab - Learn Kubernetes networking, storage & workloads
       </footer>
     </main>
   );

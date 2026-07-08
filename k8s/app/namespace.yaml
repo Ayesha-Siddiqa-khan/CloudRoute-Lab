@@ -4,5 +4,4 @@ metadata:
   name: cloudroute-lab
   labels:
     cloudroute-lab/shared-gateway-access: "true"
-  labels:
     app.kubernetes.io/part-of: cloudroute-lab

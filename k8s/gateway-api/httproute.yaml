@@ -14,6 +14,17 @@ spec:
     - name: cloudroute-gateway
       sectionName: http
   rules:
+    # Backend health endpoints used by probes and the frontend dashboard
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /health
+        - path:
+            type: PathPrefix
+            value: /ready
+      backendRefs:
+        - name: cloudroute-backend
+          port: 8000
     # Route /api requests to backend
     - matches:
         - path:

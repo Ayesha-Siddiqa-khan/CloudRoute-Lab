@@ -19,7 +19,7 @@ sed -i "s|https://.*:6443|https://${PUBLIC_IP}:6443|g" /tmp/kubeconfig-admin.yam
 KUBECONFIG_B64=$(base64 -w 0 /tmp/kubeconfig-admin.yaml)
 
 echo ""
-echo "=== Add this as KUBE_CONFIG secret in GitHub ==="
+echo "=== Add this as KUBE_CONFIG_DATA secret in GitHub ==="
 echo ""
 echo "$KUBECONFIG_B64"
 echo ""
@@ -28,4 +28,4 @@ rm /tmp/kubeconfig-admin.yaml
 
 echo ""
 echo "=== Done ==="
-echo "Add the base64 output above as a GitHub Actions secret named KUBE_CONFIG"
+echo "Add the base64 output above as a GitHub Actions secret named KUBE_CONFIG_DATA"

@@ -516,25 +516,25 @@ variable "iam_roles" {
 
 
 variable "enable_kubernetes_ingress_nlb" {
-  description = "Create an AWS Network Load Balancer that forwards public HTTP/HTTPS to ingress-nginx NodePorts on self-managed Kubernetes worker nodes"
+  description = "Legacy optional NLB toggle. CloudRoute Lab's preferred path is external NGINX EC2 to the Gateway API NodePort."
   type        = bool
   default     = false
 }
 
 variable "ingress_http_node_port" {
-  description = "Fixed ingress-nginx HTTP NodePort"
+  description = "Legacy fixed HTTP NodePort. Prefer gateway_http_node_port for Gateway API traffic."
   type        = number
   default     = 30080
 }
 
 variable "ingress_https_node_port" {
-  description = "Fixed ingress-nginx HTTPS NodePort"
+  description = "Legacy fixed HTTPS NodePort retained for compatibility."
   type        = number
   default     = 30443
 }
 
 variable "ingress_nodeport_allowed_cidr" {
-  description = "CIDR allowed to reach the ingress-nginx NodePort security group through the public NLB path"
+  description = "Legacy CIDR for the optional NLB NodePort security group."
   type        = string
   default     = "0.0.0.0/0"
 }
