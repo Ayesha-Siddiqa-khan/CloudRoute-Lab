@@ -7,8 +7,8 @@ on:
 env:
   AWS_REGION: ${{ vars.AWS_REGION }}
   ECR_REGISTRY: ${{ vars.ECR_REGISTRY }}
-  ECR_REPOSITORY_FRONTEND: cloudroute-lab-frontend
-  ECR_REPOSITORY_BACKEND: cloudroute-lab-backend
+  ECR_REPOSITORY_FRONTEND: ${{ vars.FRONTEND_IMAGE_NAME || 'cloudroute-lab-frontend' }}
+  ECR_REPOSITORY_BACKEND: ${{ vars.BACKEND_IMAGE_NAME || 'cloudroute-lab-backend' }}
   KUBE_NAMESPACE: cloudroute-lab
 
 jobs:
@@ -81,9 +81,12 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Set up kubeconfig
+        env:
+          KUBE_CONFIG_B64: ${{ secrets.KUBE_CONFIG_DATA || secrets.KUBE_CONFIG }}
         run: |
           mkdir -p $HOME/.kube
-          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
+          test -n "$KUBE_CONFIG_B64"
+          echo "$KUBE_CONFIG_B64" | base64 -d > $HOME/.kube/config
           chmod 600 $HOME/.kube/config
 
       - name: Update image tags in manifests
@@ -101,10 +104,12 @@ jobs:
           kubectl apply -f k8s/app/frontend-service.yaml
           kubectl apply -f k8s/app/backend-deployment.yaml
           kubectl apply -f k8s/app/backend-service.yaml
+          kubectl apply -f k8s/app/external-api.yaml
 
       - name: Apply Gateway API resources
         run: |
           kubectl apply -f k8s/gateway-api/gatewayclass.yaml
+          kubectl apply -f k8s/gateway-api/envoyproxy-nodeport.yaml
           kubectl apply -f k8s/gateway-api/gateway.yaml
           kubectl apply -f k8s/gateway-api/httproute.yaml
 
