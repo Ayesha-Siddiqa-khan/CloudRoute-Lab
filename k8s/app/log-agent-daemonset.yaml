@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: cloudroute-log-agent
+  namespace: cloudroute-lab
+  labels:
+    app: cloudroute-log-agent
+  annotations:
+    cloudroute-lab/usage: "Legacy learning example. Use k8s/monitoring/fluent-bit-*.yaml for CloudWatch logging."
+spec:
+  selector:
+    matchLabels:
+      app: cloudroute-log-agent
+  template:
+    metadata:
+      labels:
+        app: cloudroute-log-agent
+    spec:
+      containers:
+        - name: log-agent
+          image: fluent/fluent-bit:3.0
+          ports:
+            - containerPort: 2020
+              name: http
+          resources:
+            requests:
+              cpu: 20m
+              memory: 32Mi
+            limits:
+              cpu: 50m
+              memory: 64Mi
+          volumeMounts:
+            - name: varlog
+              mountPath: /var/log
+              readOnly: true
+            - name: containers
+              mountPath: /var/lib/docker/containers
+              readOnly: true
+      volumes:
+        - name: varlog
+          hostPath:
+            path: /var/log
+        - name: containers
+          hostPath:
+            path: /var/lib/docker/containers

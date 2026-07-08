@@ -1,0 +1,25 @@
+# Dependencies and virtual environments
+node_modules/
+venv/
+__pycache__/
+*.py[cod]
+
+# Build output
+.next/
+dist/
+build/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

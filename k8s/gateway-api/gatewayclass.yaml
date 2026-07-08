@@ -1,0 +1,13 @@
+# GatewayClass for Envoy Gateway
+# This resource defines which controller handles Gateway resources.
+# Prerequisite: Envoy Gateway controller must be installed first.
+# See k8s/gateway-api/README.md for installation instructions.
+
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: envoy-gateway
+  labels:
+    app.kubernetes.io/part-of: cloudroute-lab
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller

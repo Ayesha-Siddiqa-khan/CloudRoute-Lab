@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: cloudroute-backend
+  namespace: cloudroute-lab
+  labels:
+    app: cloudroute-backend
+spec:
+  type: ClusterIP
+  selector:
+    app: cloudroute-backend
+  ports:
+    - port: 8000
+      targetPort: 8000
+      protocol: TCP

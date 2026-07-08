@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudroute-config
+  namespace: cloudroute-lab
+data:
+  APP_ENV: "production"
+  ALLOWED_ORIGINS: "http://cloudroute-frontend.cloudroute-lab.svc.cluster.local"
+  EXTERNAL_SERVICE_ALIAS: "external-api.cloudroute-lab.svc.cluster.local"
+  NEXT_PUBLIC_API_BASE_URL: "http://cloudroute-backend.cloudroute-lab.svc.cluster.local"

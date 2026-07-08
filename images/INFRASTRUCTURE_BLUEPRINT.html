@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CloudRoute Lab - Infrastructure Blueprint</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 40px;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+            font-size: 2.5em;
+        }
+        h2 {
+            color: #34495e;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 5px;
+            margin-top: 40px;
+            font-size: 1.8em;
+        }
+        h3 {
+            color: #2980b9;
+            margin-top: 30px;
+            font-size: 1.4em;
+        }
+        h4 {
+            color: #16a085;
+            margin-top: 20px;
+            font-size: 1.2em;
+        }
+        code {
+            background-color: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        pre {
+            background-color: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            line-height: 1.4;
+        }
+        .highlight {
+            background-color: #fff3cd;
+            padding: 10px;
+            border-left: 4px solid #ffc107;
+            margin: 15px 0;
+        }
+        .info {
+            background-color: #d1ecf1;
+            padding: 10px;
+            border-left: 4px solid #17a2b8;
+            margin: 15px 0;
+        }
+        .success {
+            background-color: #d4edda;
+            padding: 10px;
+            border-left: 4px solid #28a745;
+            margin: 15px 0;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #3498db;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        .architecture-diagram {
+            background-color: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            white-space: pre;
+            overflow-x: auto;
+        }
+        .cost-table {
+            background-color: #fff3cd;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .resource-list {
+            columns: 2;
+            column-gap: 40px;
+        }
+        .resource-item {
+            break-inside: avoid;
+            margin-bottom: 10px;
+        }
+        @media print {
+            body {
+                margin: 0;
+                padding: 20px;
+            }
+            .page-break {
+                page-break-before: always;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>CloudRoute Lab - Complete Infrastructure Blueprint</h1>
+    
+    <div class="info">
+        <strong>Project:</strong> CloudRoute Lab<br>
+        <strong>Type:</strong> Student Kubernetes Lab (Cost-Aware)<br>
+        <strong>Architecture:</strong> Self-managed Kubernetes on AWS EC2<br>
+        <strong>Nodes:</strong> 1 Master (Control Plane) + 1 Worker
+    </div>
+
+    <h2>1. Cloud Network Structure (AWS VPC)</h2>
+    
+    <h3>VPC Configuration</h3>
+    <pre>
+VPC Name:        cloudroute-vpc
+VPC CIDR:        10.0.0.0/16
+Region:          us-east-1 (or your preferred region)
+Tenancy:         Default (shared)
+DNS Hostnames:   Enabled
+DNS Resolution:  Enabled</pre>
+
+    <h3>Subnet Configuration</h3>
+    <pre>
+Public Subnet Name:   cloudroute-public-subnet-1a
+Public Subnet CIDR:   10.0.1.0/24
+Availability Zone:    us-east-1a
+Auto-assign Public IP: Yes</pre>
+
+    <h3>Internet Gateway</h3>
+    <pre>
+IGW Name:   cloudroute-igw
+Attached:   cloudroute-vpc</pre>
+
+    <h3>Route Table</h3>
+    <pre>
+Route Table Name:    cloudroute-public-rt
+Association:         cloudroute-public-subnet-1a
+Routes:
+  - 0.0.0.0/0 → cloudroute-igw (Internet Gateway)</pre>
+
+    <h3>Security Groups</h3>
+    
+    <h4>Master Node Security Group</h4>
+    <pre>
+SG Name:        cloudroute-master-sg
+Inbound Rules:
+  - Port 22 (SSH)        → 0.0.0.0/0 (or your IP only)
+  - Port 6443 (API)      → 0.0.0.0/0 (or worker SG only)
+  - Port 2379-2380 (etcd) → Self (cloudroute-master-sg)
+  - Port 10250 (kubelet)  → Self + Worker SG
+  - Port 10259 (scheduler)→ Self
+  - Port 10257 (controller)→ Self
+  - Port 80 (HTTP)        → 0.0.0.0/0
+  - Port 443 (HTTPS)      → 0.0.0.0/0
+  - Port 30000-32767 (NodePort) → 0.0.0.0/0
+Outbound Rules:
+  - All traffic → 0.0.0.0/0</pre>
+
+    <h4>Worker Node Security Group</h4>
+    <pre>
+SG Name:        cloudroute-worker-sg
+Inbound Rules:
+  - Port 22 (SSH)        → 0.0.0.0/0 (or your IP only)
+  - Port 10250 (kubelet)  → Master SG only
+  - Port 30000-32767 (NodePort) → 0.0.0.0/0
+  - Port 80 (HTTP)        → 0.0.0.0/0
+  - Port 443 (HTTPS)      → 0.0.0.0/0
+Outbound Rules:
+  - All traffic → 0.0.0.0/0</pre>
+
+    <h2>2. Compute Structure (AWS EC2)</h2>
+    
+    <h3>Master Node (Control Plane)</h3>
+    <pre>
+Instance Name:     cloudroute-master
+Instance Type:     t3.medium (2 vCPU, 4 GB RAM)
+AMI:               Ubuntu 22.04 LTS (HVM, EBS-backed)
+Volume Type:       gp3
+Volume Size:       20 GB
+Volume Name:       cloudroute-master-root
+Key Pair:          cloudroute-keypair
+Security Group:    cloudroute-master-sg
+Subnet:            cloudroute-public-subnet-1a
+Public IP:         Yes (or Elastic IP)
+IAM Role:          cloudroute-master-role
+Hostname:          cloudroute-master
+Tags:
+  Name: cloudroute-master
+  Role: master
+  Project: cloudroute-lab</pre>
+
+    <h3>Worker Node</h3>
+    <pre>
+Instance Name:     cloudroute-worker
+Instance Type:     t3.medium (2 vCPU, 4 GB RAM)
+AMI:               Ubuntu 22.04 LTS (HVM, EBS-backed)
+Volume Type:       gp3
+Volume Size:       20 GB
+Volume Name:       cloudroute-worker-root
+Key Pair:          cloudroute-keypair
+Security Group:    cloudroute-worker-sg
+Subnet:            cloudroute-public-subnet-1a
+Public IP:         Yes
+IAM Role:          cloudroute-worker-role
+Hostname:          cloudroute-worker
+Tags:
+  Name: cloudroute-worker
+  Role: worker
+  Project: cloudroute-lab</pre>
+
+    <h3>SSH Key Pair</h3>
+    <pre>
+Key Pair Name:     cloudroute-keypair
+Key Type:          RSA 2048-bit
+Private Key:       Save locally as cloudroute-keypair.pem
+File Permissions:  chmod 400 cloudroute-keypair.pem</pre>
+
+    <h3>Instance Type Justification</h3>
+    <pre>
+t3.medium:  - 2 vCPU, 4 GB RAM
+            - Burstable performance (good for labs)
+            - ~$30/month per instance (on-demand)
+            - Total: ~$60/month for both nodes
+            - Sufficient for kubeadm + small workloads</pre>
+
+    <h2>3. Kubernetes Cluster Plan</h2>
+    
+    <h3>Cluster Configuration</h3>
+    <pre>
+Cluster Name:         cloudroute-cluster
+Kubernetes Version:   v1.29.x (latest stable)
+Container Runtime:    containerd (recommended)
+CNI Plugin:           Calico (recommended for NetworkPolicy support)
+Pod CIDR:             10.244.0.0/16
+Service CIDR:         10.96.0.0/12
+DNS:                  CoreDNS</pre>
+
+    <h3>Master Node Role</h3>
+    <pre>
+Components:
+  - kube-apiserver
+  - kube-scheduler
+  - kube-controller-manager
+  - etcd (single-node)
+  - kubelet
+  - kube-proxy
+  - Calico node
+
+Taints:
+  - node-role.kubernetes.io/master:NoSchedule
+    (Prevent regular pods from running on master)</pre>
+
+    <h3>Worker Node Role</h3>
+    <pre>
+Components:
+  - kubelet
+  - kube-proxy
+  - Calico node
+
+Labels:
+  - node-role.kubernetes.io/worker: ""</pre>
+
+    <h3>Container Runtime Setup</h3>
+    <pre>
+Runtime:          containerd
+Cgroup Driver:    systemd
+Sandbox Image:    registry.k8s.io/pause:3.9</pre>
+
+    <h3>kubeadm Initialization</h3>
+    <pre>
+Control Plane Endpoint: <master-public-ip>:6443
+  (or use internal IP if within VPC)
+
+kubeconfig Output:
+  - /etc/kubernetes/admin.conf → copy to ~/.kube/config on master
+  - Or output to: ~/cloudroute-kubeconfig</pre>
+
+    <h3>CNI Plugin (Calico)</h3>
+    <pre>
+Installation:     kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.27.0/manifests/calico.yaml
+Pod CIDR:         10.244.0.0/16
+Features:
+  - NetworkPolicy support
+  - Network isolation
+  - Good for learning K8s networking</pre>
+
+    <h2>4. Load Balancing and Networking Plan</h2>
+    
+    <h3>Service Types and Usage</h3>
+    
+    <h4>ClusterIP Services</h4>
+    <pre>
+Frontend ClusterIP:
+  Name:          cloudroute-frontend
+  Type:          ClusterIP
+  Port:          80 → TargetPort 3000
+  Selector:      app=cloudroute-frontend
+  Usage:         Internal access within cluster
+
+Backend ClusterIP:
+  Name:          cloudroute-backend
+  Type:          ClusterIP
+  Port:          8000 → TargetPort 8000
+  Selector:      app=cloudroute-backend
+  Usage:         Internal API access</pre>
+
+    <h4>NodePort Services</h4>
+    <pre>
+Frontend NodePort:
+  Name:          cloudroute-frontend-nodeport
+  Type:          NodePort
+  Port:          80 → TargetPort 3000
+  NodePort:      30080
+  Selector:      app=cloudroute-frontend
+  Usage:         Quick external access for testing
+
+Backend NodePort:
+  Name:          cloudroute-backend-nodeport
+  Type:          NodePort
+  Port:          8000 → TargetPort 8000
+  NodePort:      30081
+  Selector:      app=cloudroute-backend
+  Usage:         Quick external access for testing</pre>
+
+    <h4>LoadBalancer Service (Optional for Lab)</h4>
+    <pre>
+External LB (MetalLB for bare-metal):
+  Name:          cloudroute-frontend-lb
+  Type:          LoadBalancer
+  Port:          80 → TargetPort 3000
+  Selector:      app=cloudroute-frontend
+  Usage:         Production-like external access
+
+Note: For self-managed K8s on EC2, you can:
+  1. Use MetalLB for bare-metal LoadBalancer support
+  2. Or use NodePort with external proxy
+  3. Or use AWS NLB with cloud provider (if installed)</pre>
+
+    <h4>ExternalName Services</h4>
+    <pre>
+External API Alias:
+  Name:          external-api
+  Type:          ExternalName
+  ExternalName:  jsonplaceholder.typicode.com
+  Usage:         Practice referencing external APIs
+
+External Database Alias:
+  Name:          external-db
+  Type:          ExternalName
+  ExternalName:  mydb.example.com
+  Usage:         Practice referencing external databases</pre>
+
+    <h4>Gateway API (Optional Advanced)</h4>
+    <pre>
+Gateway Class:     istio (or envoy-gateway)
+Gateway Name:      cloudroute-gateway
+Listeners:
+  - Name: http
+    Port: 80
+    Protocol: HTTP
+
+HTTPRoute Name:    cloudroute-route
+Rules:
+  - Path: /api → Backend Service (cloudroute-backend:8000)
+  - Path: /   → Frontend Service (cloudroute-frontend:3000)</pre>
+
+    <h3>Traffic Flow</h3>
+    <pre>
+External User
+    ↓
+Internet Gateway
+    ↓
+EC2 Public IP (NodePort or LoadBalancer)
+    ↓
+kube-proxy / iptables
+    ↓
+Service (ClusterIP/NodePort/LoadBalancer)
+    ↓
+Pod (Frontend or Backend)</pre>
+
+    <h2>5. Storage Plan</h2>
+    
+    <h3>EBS Volume Configuration</h3>
+    <pre>
+Master Root Volume:
+  Type:           gp3
+  Size:           20 GB
+  IOPS:           3000 (baseline)
+  Throughput:     125 MB/s
+  Encrypted:      Yes
+  Delete on Termination: Yes
+
+Worker Root Volume:
+  Type:           gp3
+  Size:           20 GB
+  IOPS:           3000 (baseline)
+  Throughput:     125 MB/s
+  Encrypted:      Yes
+  Delete on Termination: Yes</pre>
+
+    <h3>Additional EBS Volumes for Practice</h3>
+    <pre>
+Data Volume for StatefulSet Practice:
+  Type:           gp3
+  Size:           10 GB (additional)
+  IOPS:           3000
+  Throughput:     125 MB/s
+  Encrypted:      Yes
+  Availability:   us-east-1a
+  Attachment:     cloudroute-worker
+  Device Name:    /dev/sdf
+
+Note: This volume can be used for:
+  - StatefulSet PVC practice
+  - Dynamic provisioning practice
+  - Persistent storage demos</pre>
+
+    <h3>StorageClass Configuration</h3>
+    <pre>
+StorageClass Name:    cloudroute-efs-sc (or gp3-sc)
+Provisioner:          kubernetes.io/aws-ebs
+Parameters:
+  type: gp3
+  fsType: ext4
+ReclaimPolicy:        Delete
+VolumeBindingMode:    WaitForFirstConsumer
+AllowVolumeExpansion: True</pre>
+
+    <h3>CSI Driver Requirements</h3>
+    <pre>
+AWS EBS CSI Driver:
+  Image:          registry.k8s.io/sig-storage/csi-driver-aws-ebs:v1.27.0
+  Installation:   kubectl apply -k "github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/stable/?ref=release-1.27"
+  IAM Role:       Requires IAM role with EBS permissions
+  Usage:          Dynamic provisioning of EBS volumes
+
+Note: For simple lab, you can use:
+  - Manual PV/PVC creation
+  - Or install CSI driver for dynamic provisioning</pre>
+
+    <h3>Persistent Volume Claims (Practice)</h3>
+    <pre>
+Frontend PVC:
+  Name:          cloudroute-frontend-data
+  Access Mode:   ReadWriteOnce
+  Storage:       1Gi
+  StorageClass:  cloudroute-efs-sc
+
+Backend PVC:
+  Name:          cloudroute-backend-data
+  Access Mode:   ReadWriteOnce
+  Storage:       1Gi
+  StorageClass:  cloudroute-efs-sc
+
+Database PVC (StatefulSet):
+  Name:          cloudroute-db-data
+  Access Mode:   ReadWriteOnce
+  Storage:       5Gi
+  StorageClass:  cloudroute-efs-sc</pre>
+
+    <h2>6. Container Registry Plan</h2>
+    
+    <h3>Recommendation: GitHub Container Registry (GHCR)</h3>
+    <pre>
+Why GHCR over ECR:
+  1. Free for public repositories
+  2. Integrated with GitHub Actions
+  3. No AWS billing for storage
+  4. Simple authentication with GITHUB_TOKEN
+  5. Good for student labs</pre>
+
+    <h3>Repository Naming</h3>
+    <pre>
+Registry:        ghcr.io
+Organization:    &lt;your-github-username&gt;
+
+Frontend Repo:   ghcr.io/&lt;your-username&gt;/cloudroute-frontend
+Backend Repo:    ghcr.io/&lt;your-username&gt;/cloudroute-backend</pre>
+
+    <h3>Image Naming Structure</h3>
+    <pre>
+Frontend Images:
+  Latest:         ghcr.io/&lt;your-username&gt;/cloudroute-frontend:latest
+  SHA-based:      ghcr.io/&lt;your-username&gt;/cloudroute-frontend:&lt;git-sha&gt;
+  Version:        ghcr.io/&lt;your-username&gt;/cloudroute-frontend:v1.0.0
+
+Backend Images:
+  Latest:         ghcr.io/&lt;your-username&gt;/cloudroute-backend:latest
+  SHA-based:      ghcr.io/&lt;your-username&gt;/cloudroute-backend:&lt;git-sha&gt;
+  Version:        ghcr.io/&lt;your-username&gt;/cloudroute-backend:v1.0.0</pre>
+
+    <h3>Image Pull Policy</h3>
+    <pre>
+For Lab:
+  imagePullPolicy: Always (for latest tags)
+  imagePullPolicy: IfNotPresent (for SHA/version tags)
+
+Image Pull Secret:
+  Name:           ghcr-secret
+  Type:           kubernetes.io/dockerconfigjson
+  Registry:       ghcr.io
+  Username:       &lt;your-github-username&gt;
+  Password:       &lt;github-personal-access-token&gt;</pre>
+
+    <h3>Alternative: AWS ECR (If Preferred)</h3>
+    <pre>
+ECR Repository Names:
+  cloudroute-frontend
+  cloudroute-backend
+
+Lifecycle Policy:
+  - Keep last 5 images
+  - Expire untagged images after 7 days
+
+Cost: ~$0.10/GB/month (minimal for lab)</pre>
+
+    <h2>7. CI/CD Readiness Plan</h2>
+    
+    <h3>GitHub Actions Configuration</h3>
+    <pre>
+Workflow File:     .github/workflows/deploy.yml
+Trigger:           Push to main branch
+Runner:            ubuntu-latest</pre>
+
+    <h3>Required Secrets (Minimal)</h3>
+    <pre>
+Repository Secrets:
+  1. KUBE_CONFIG        → Base64-encoded kubeconfig for cluster access
+  2. REGISTRY_URL       → ghcr.io/&lt;your-username&gt;
+  3. AWS_REGION         → us-east-1 (if using ECR)
+
+No Additional Variables Needed:
+  - Image names derived from repository name
+  - Tags derived from git SHA
+  - Namespace hardcoded as cloudroute-lab</pre>
+
+    <h3>OIDC Alternative (Recommended)</h3>
+    <pre>
+OIDC Provider:     AWS IAM Identity Center (or GitHub OIDC)
+Role:              GitHubActions-CloudRoute-Lab
+Trust Policy:      GitHub OIDC federation
+Permissions:
+  - ecr:GetAuthorizationToken
+  - ecr:BatchCheckLayerAvailability
+  - ecr:PutImage
+  - ecr:InitiateLayerUpload
+  - ecr:UploadLayerPart
+  - ecr:CompleteLayerUpload
+
+Benefits:
+  - No long-lived AWS credentials
+  - Automatic credential rotation
+  - Better security posture</pre>
+
+    <h3>Workflow Steps</h3>
+    <pre>
+1. Checkout code
+2. Set up Docker Buildx
+3. Login to container registry
+4. Build Docker image
+5. Push image with SHA tag
+6. Update Kubernetes deployment
+7. Verify rollout status</pre>
+
+    <h3>Deployment Method</h3>
+    <pre>
+Option A: kubectl set image
+  - Simple, no additional tools
+  - Requires kubeconfig secret
+
+Option B: Helm upgrade
+  - More complex, but declarative
+  - Requires Helm chart in repo
+
+Recommendation for Lab: Option A (kubectl)</pre>
+
+    <h2>8. Monitoring Readiness Plan</h2>
+    
+    <h3>Prometheus Stack</h3>
+    <pre>
+Namespace:           monitoring
+Prometheus:
+  Image:             prom/prometheus:v2.49.0
+  Storage:           5Gi PVC
+  Retention:         7 days
+  Resources:
+    Requests:        200m CPU, 512Mi RAM
+    Limits:          500m CPU, 1Gi RAM
+
+Grafana:
+  Image:             grafana/grafana:10.3.1
+  Storage:           2Gi PVC
+  Default Credentials:
+    Username:        admin
+    Password:        cloudroute-admin
+  Resources:
+    Requests:        100m CPU, 256Mi RAM
+    Limits:          200m CPU, 512Mi RAM</pre>
+
+    <h3>Node Exporter (DaemonSet)</h3>
+    <pre>
+Name:                node-exporter
+Image:               prom/node-exporter:v1.7.0
+DaemonSet:           Yes (runs on every node)
+Resources:
+  Requests:          50m CPU, 64Mi RAM
+  Limits:            100m CPU, 128Mi RAM
+Ports:
+  - 9100 (metrics)
+
+Purpose:             Collect node-level metrics</pre>
+
+    <h3>Log Agent (DaemonSet)</h3>
+    <pre>
+Name:                log-agent
+Image:               fluent/fluent-bit:3.0
+DaemonSet:           Yes (runs on every node)
+Resources:
+  Requests:          20m CPU, 32Mi RAM
+  Limits:            50m CPU, 64Mi RAM
+
+Purpose:             Collect and forward logs
+Output:              stdout (for lab) or Elasticsearch (optional)</pre>
+
+    <h3>Resource Sizing for Small Cluster</h3>
+    <pre>
+Total Monitoring Overhead:
+  - Prometheus:       ~1.5 GB RAM
+  - Grafana:          ~0.5 GB RAM
+  - Node Exporter:    ~0.2 GB RAM (both nodes)
+  - Log Agent:        ~0.1 GB RAM (both nodes)
+  - Total:            ~2.3 GB RAM
+
+Available on 2x t3.medium (8 GB total):
+  - System/K8s:       ~2 GB
+  - Monitoring:       ~2.3 GB
+  - Applications:     ~3.7 GB
+  - Buffer:           ~0 GB (tight, but works for lab)</pre>
+
+    <h3>Monitoring Endpoints</h3>
+    <pre>
+Prometheus UI:     http://&lt;master-ip&gt;:30090
+Grafana UI:        http://&lt;master-ip&gt;:30030
+Node Exporter:     http://&lt;node-ip&gt;:9100/metrics
+
+Service Types:
+  - Prometheus:    NodePort (30090)
+  - Grafana:       NodePort (30030)</pre>
+
+    <h2>9. Security Plan</h2>
+    
+    <h3>IAM Roles</h3>
+    
+    <h4>Master Node Role</h4>
+    <pre>
+Role Name:         cloudroute-master-role
+Trust Policy:      EC2 Service
+Managed Policies:
+  - AmazonEKS_CNI_Policy (optional, for VPC CNI)
+  - AmazonEC2ContainerRegistryReadOnly
+
+Custom Inline Policy:
+  {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Action": [
+          "ec2:DescribeInstances",
+          "ec2:DescribeVolumes",
+          "ec2:AttachVolume",
+          "ec2:DetachVolume"
+        ],
+        "Resource": "*"
+      }
+    ]
+  }
+
+Purpose:           Allow EC2 interactions for K8s cloud provider</pre>
+
+    <h4>Worker Node Role</h4>
+    <pre>
+Role Name:         cloudroute-worker-role
+Trust Policy:      EC2 Service
+Managed Policies:
+  - AmazonEC2ContainerRegistryReadOnly
+
+Purpose:           Pull images from ECR (if using ECR)</pre>
+
+    <h3>Least Privilege Recommendations</h3>
+    <pre>
+1. SSH Access:
+   - Restrict to your IP only (not 0.0.0.0/0)
+   - Use key-based authentication only
+   - Disable root login
+
+2. Kubernetes Access:
+   - Use RBAC for fine-grained access
+   - Create service accounts for applications
+   - Limit namespace access
+
+3. Container Registry:
+   - Use read-only tokens for image pulls
+   - Rotate credentials regularly
+
+4. Network:
+   - Restrict NodePort access to known IPs
+   - Use NetworkPolicies for pod-to-pod traffic
+   - Enable VPC Flow Logs for debugging</pre>
+
+    <h3>Security Group Rules (Summary)</h3>
+    <pre>
+Master SG:
+  Inbound:
+    22 (SSH)           → Your IP only
+    6443 (API)         → Worker SG + Your IP
+    2379-2380 (etcd)   → Master SG only
+    10250 (kubelet)    → Master + Worker SG
+    80, 443            → 0.0.0.0/0 (for web apps)
+    30000-32767        → 0.0.0.0/0 (NodePort)
+
+Worker SG:
+  Inbound:
+    22 (SSH)           → Your IP only
+    10250 (kubelet)    → Master SG only
+    80, 443            → 0.0.0.0/0
+    30000-32767        → 0.0.0.0/0 (NodePort)</pre>
+
+    <h3>SSH Access Plan</h3>
+    <pre>
+SSH Configuration:
+  User:              ubuntu (for Ubuntu AMI)
+  Key:               cloudroute-keypair.pem
+  Port:              22
+  Authentication:    Key-based only
+  Root Login:        Disabled
+
+SSH Commands:
+  Master:  ssh -i cloudroute-keypair.pem ubuntu@&lt;master-public-ip&gt;
+  Worker:  ssh -i cloudroute-keypair.pem ubuntu@&lt;worker-public-ip&gt;
+
+Jump Host (Optional):
+  - SSH into master, then ssh into worker
+  - Or use ProxyJump for direct access</pre>
+
+    <h3>Kubernetes Access Plan</h3>
+    <pre>
+kubeconfig Location:
+  Master:    /etc/kubernetes/admin.conf
+  Local:     ~/.kube/config
+
+Access Methods:
+  1. kubectl (from master node)
+  2. kubectl (from local machine with kubeconfig)
+  3. Kubernetes Dashboard (optional)
+
+RBAC Setup:
+  - Create admin role for yourself
+  - Create limited roles for applications
+  - Use ServiceAccounts for pods</pre>
+
+    <h2>10. Final Output Format</h2>
+    
+    <h3>Infrastructure Architecture Diagram</h3>
+    <div class="architecture-diagram">
+[Internet]
+    ↓
+[Internet Gateway] → cloudroute-igw
+    ↓
+[VPC] → cloudroute-vpc (10.0.0.0/16)
+    ↓
+[Public Subnet] → cloudroute-public-subnet-1a (10.0.1.0/24)
+    ↓
+┌─────────────────────────────────────────────────┐
+│  [Master Node]              [Worker Node]       │
+│  cloudroute-master          cloudroute-worker   │
+│  t3.medium                  t3.medium           │
+│  20 GB root                 20 GB root          │
+│  + 10 GB data (optional)                        │
+│                                                  │
+│  Components:                Components:         │
+│  - kube-apiserver           - kubelet           │
+│  - kube-scheduler           - kube-proxy        │
+│  - kube-controller-mgr      - Calico node       │
+│  - etcd                     - Node Exporter     │
+│  - kubelet                  - Log Agent         │
+│  - kube-proxy                                    │
+│  - Calico node                                   │
+│  - Prometheus                                    │
+│  - Grafana                                       │
+│  - Node Exporter                                 │
+│  - Log Agent                                     │
+└─────────────────────────────────────────────────┘</div>
+
+    <h3>Resource List</h3>
+    
+    <h4>AWS Resources</h4>
+    <div class="resource-list">
+        <div class="resource-item">1. VPC: cloudroute-vpc</div>
+        <div class="resource-item">2. Subnet: cloudroute-public-subnet-1a</div>
+        <div class="resource-item">3. Internet Gateway: cloudroute-igw</div>
+        <div class="resource-item">4. Route Table: cloudroute-public-rt</div>
+        <div class="resource-item">5. Security Group (Master): cloudroute-master-sg</div>
+        <div class="resource-item">6. Security Group (Worker): cloudroute-worker-sg</div>
+        <div class="resource-item">7. EC2 Instance (Master): cloudroute-master</div>
+        <div class="resource-item">8. EC2 Instance (Worker): cloudroute-worker</div>
+        <div class="resource-item">9. EBS Volume (Master): cloudroute-master-root (20 GB)</div>
+        <div class="resource-item">10. EBS Volume (Worker): cloudroute-worker-root (20 GB)</div>
+        <div class="resource-item">11. EBS Volume (Data): cloudroute-worker-data (10 GB, optional)</div>
+        <div class="resource-item">12. Key Pair: cloudroute-keypair</div>
+        <div class="resource-item">13. IAM Role (Master): cloudroute-master-role</div>
+        <div class="resource-item">14. IAM Role (Worker): cloudroute-worker-role</div>
+    </div>
+
+    <h4>Kubernetes Resources (to be created)</h4>
+    <div class="resource-list">
+        <div class="resource-item">1. Namespace: cloudroute-lab</div>
+        <div class="resource-item">2. Namespace: monitoring</div>
+        <div class="resource-item">3. Deployment: cloudroute-frontend</div>
+        <div class="resource-item">4. Deployment: cloudroute-backend</div>
+        <div class="resource-item">5. DaemonSet: node-exporter</div>
+        <div class="resource-item">6. DaemonSet: log-agent</div>
+        <div class="resource-item">7. StatefulSet: cloudroute-db (optional)</div>
+        <div class="resource-item">8. Service: cloudroute-frontend (ClusterIP)</div>
+        <div class="resource-item">9. Service: cloudroute-backend (ClusterIP)</div>
+        <div class="resource-item">10. Service: cloudroute-frontend-nodeport (NodePort)</div>
+        <div class="resource-item">11. Service: cloudroute-backend-nodeport (NodePort)</div>
+        <div class="resource-item">12. Service: cloudroute-frontend-lb (LoadBalancer, optional)</div>
+        <div class="resource-item">13. Service: external-api (ExternalName)</div>
+        <div class="resource-item">14. Service: external-db (ExternalName)</div>
+        <div class="resource-item">15. Service: prometheus (NodePort)</div>
+        <div class="resource-item">16. Service: grafana (NodePort)</div>
+        <div class="resource-item">17. Gateway: cloudroute-gateway (optional)</div>
+        <div class="resource-item">18. HTTPRoute: cloudroute-route (optional)</div>
+        <div class="resource-item">19. ConfigMap: cloudroute-config</div>
+        <div class="resource-item">20. Secret: ghcr-secret</div>
+        <div class="resource-item">21. PVC: prometheus-data</div>
+        <div class="resource-item">22. PVC: grafana-data</div>
+        <div class="resource-item">23. PVC: cloudroute-frontend-data</div>
+        <div class="resource-item">24. PVC: cloudroute-backend-data</div>
+        <div class="resource-item">25. PVC: cloudroute-db-data</div>
+        <div class="resource-item">26. StorageClass: cloudroute-efs-sc</div>
+        <div class="resource-item">27. ServiceAccount: cloudroute-app</div>
+        <div class="resource-item">28. ClusterRole: cloudroute-app-role</div>
+        <div class="resource-item">29. ClusterRoleBinding: cloudroute-app-binding</div>
+    </div>
+
+    <h3>Recommended Names for Every Resource</h3>
+    
+    <h4>AWS Resource Names</h4>
+    <pre>
+cloudroute-vpc
+cloudroute-public-subnet-1a
+cloudroute-igw
+cloudroute-public-rt
+cloudroute-master-sg
+cloudroute-worker-sg
+cloudroute-master
+cloudroute-worker
+cloudroute-master-root
+cloudroute-worker-root
+cloudroute-worker-data
+cloudroute-keypair
+cloudroute-master-role
+cloudroute-worker-role</pre>
+
+    <h4>Kubernetes Resource Names</h4>
+    <pre>
+cloudroute-lab (namespace)
+monitoring (namespace)
+cloudroute-frontend (deployment)
+cloudroute-backend (deployment)
+node-exporter (daemonset)
+log-agent (daemonset)
+cloudroute-db (statefulset)
+cloudroute-frontend (service)
+cloudroute-backend (service)
+cloudroute-frontend-nodeport (service)
+cloudroute-backend-nodeport (service)
+cloudroute-frontend-lb (service)
+external-api (service)
+external-db (service)
+prometheus (service)
+grafana (service)
+cloudroute-gateway (gateway)
+cloudroute-route (httproute)
+cloudroute-config (configmap)
+ghcr-secret (secret)
+prometheus-data (pvc)
+grafana-data (pvc)
+cloudroute-frontend-data (pvc)
+cloudroute-backend-data (pvc)
+cloudroute-db-data (pvc)
+cloudroute-efs-sc (storageclass)
+cloudroute-app (serviceaccount)
+cloudroute-app-role (clusterrole)
+cloudroute-app-binding (clusterrolebinding)</pre>
+
+    <h3>Minimal Variables</h3>
+    
+    <h4>Environment Variables</h4>
+    <pre>
+# Application
+APP_ENV=production
+ALLOWED_ORIGINS=http://&lt;master-ip&gt;:30080
+EXTERNAL_SERVICE_ALIAS=external-api.cloudroute-lab.svc.cluster.local
+
+# Container Registry
+REGISTRY_URL=ghcr.io/&lt;your-username&gt;
+IMAGE_TAG=latest
+
+# Kubernetes
+NAMESPACE=cloudroute-lab
+MASTER_IP=&lt;master-public-ip&gt;
+WORKER_IP=&lt;worker-public-ip&gt;</pre>
+
+    <h4>GitHub Secrets</h4>
+    <pre>
+KUBE_CONFIG          → Base64-encoded kubeconfig
+REGISTRY_URL         → ghcr.io/&lt;your-username&gt;
+AWS_REGION           → us-east-1 (if using ECR)</pre>
+
+    <h4>GitHub Variables</h4>
+    <pre>
+None required for basic setup</pre>
+
+    <h3>Deployment Order</h3>
+    
+    <h4>Phase 1: AWS Infrastructure (InfraPilot)</h4>
+    <pre>
+1. Create VPC and Subnet
+2. Create Internet Gateway and Route Table
+3. Create Security Groups
+4. Create Key Pair
+5. Create IAM Roles
+6. Create EC2 Instances (Master + Worker)
+7. Create EBS Volumes
+8. Attach Volumes to Instances
+9. Configure SSH Access
+10. Verify Network Connectivity</pre>
+
+    <h4>Phase 2: Kubernetes Cluster (Manual or Automated)</h4>
+    <pre>
+1. SSH into Master Node
+2. Install containerd on both nodes
+3. Install kubeadm, kubelet, kubectl on both nodes
+4. Initialize Master with kubeadm init
+5. Copy kubeconfig to local machine
+6. Install Calico CNI on Master
+7. Generate join command for Worker
+8. SSH into Worker and run join command
+9. Verify cluster with kubectl get nodes
+10. Label Worker node</pre>
+
+    <h4>Phase 3: Storage Setup (Manual)</h4>
+    <pre>
+1. Create StorageClass
+2. Create PVCs for monitoring
+3. Create PVCs for applications
+4. (Optional) Attach additional EBS volume
+5. (Optional) Install EBS CSI Driver</pre>
+
+    <h4>Phase 4: Monitoring Stack (Manual)</h4>
+    <pre>
+1. Create monitoring namespace
+2. Deploy Prometheus
+3. Deploy Grafana
+4. Deploy Node Exporter DaemonSet
+5. Deploy Log Agent DaemonSet
+6. Verify monitoring endpoints</pre>
+
+    <h4>Phase 5: Application Deployment (Manual)</h4>
+    <pre>
+1. Create cloudroute-lab namespace
+2. Create ConfigMap and Secrets
+3. Deploy Frontend
+4. Deploy Backend
+5. Create ClusterIP Services
+6. Create NodePort Services
+7. (Optional) Create LoadBalancer Service
+8. Create ExternalName Services
+9. (Optional) Install Gateway API controller
+10. (Optional) Create Gateway and HTTPRoute</pre>
+
+    <h4>Phase 6: CI/CD Setup (Manual)</h4>
+    <pre>
+1. Create GitHub Actions workflow
+2. Add repository secrets
+3. Test build and push
+4. Test deployment
+5. Verify full pipeline</pre>
+
+    <h3>What InfraPilot Should Create Automatically</h3>
+    
+    <h4>AWS Resources (Terraform/CloudFormation)</h4>
+    <pre>
+1. VPC with DNS support
+2. Public Subnet with auto-assign public IP
+3. Internet Gateway attached to VPC
+4. Route Table with internet route
+5. Security Groups with rules
+6. EC2 Instances with user data
+7. EBS Volumes (root + optional data)
+8. Key Pair (or import existing)
+9. IAM Roles with policies
+10. Elastic IP (optional)</pre>
+
+    <h4>Kubernetes Resources (Helm Charts/Manifests)</h4>
+    <pre>
+1. Namespaces (cloudroute-lab, monitoring)
+2. StorageClass
+3. Monitoring stack (Prometheus, Grafana, Node Exporter, Log Agent)
+4. Application deployments (frontend, backend)
+5. Services (ClusterIP, NodePort, LoadBalancer, ExternalName)
+6. ConfigMaps and Secrets
+7. PVCs for persistent storage
+8. RBAC resources (ServiceAccount, ClusterRole, ClusterRoleBinding)</pre>
+
+    <h4>CI/CD Resources (GitHub Actions)</h4>
+    <pre>
+1. Workflow file (.github/workflows/deploy.yml)
+2. Dockerfile for frontend
+3. Dockerfile for backend
+4. .dockerignore files
+5. README with deployment instructions</pre>
+
+    <div class="cost-table">
+        <h3>Cost Estimation</h3>
+        <p><strong>Monthly Cost Breakdown (On-Demand):</strong></p>
+        <ul>
+            <li>EC2 Instances: ~$60/month</li>
+            <li>EBS Volumes: ~$4/month</li>
+            <li>Data Transfer: ~$5/month</li>
+            <li><strong>Total: ~$69/month</strong></li>
+        </ul>
+        <p><strong>Cost Optimization:</strong></p>
+        <ul>
+            <li>Use Spot Instances: ~$18/month (60% savings)</li>
+            <li>Use Reserved Instances: ~$38/month (45% savings)</li>
+        </ul>
+    </div>
+
+    <h2>Document Information</h2>
+    <pre>
+Created:        2026-07-08
+Project:        CloudRoute Lab
+Version:        1.0
+Author:         InfraPilot
+Purpose:        Complete infrastructure blueprint for student Kubernetes lab</pre>
+</body>
+</html>

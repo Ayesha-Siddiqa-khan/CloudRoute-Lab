@@ -1,0 +1,7 @@
+# Gateway API manifests have been moved to k8s/gateway-api/
+# Apply manifests in this order:
+# 1. k8s/gateway-api/gatewayclass.yaml
+# 2. k8s/gateway-api/gateway.yaml
+# 3. k8s/gateway-api/httproute.yaml
+#
+# See k8s/gateway-api/README.md for prerequisites.

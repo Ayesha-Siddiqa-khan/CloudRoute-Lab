@@ -1,0 +1,28 @@
+# Gateway for CloudRoute Lab
+# This resource defines the external traffic entry point.
+# Requires GatewayClass "envoy-gateway" to be created first.
+
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: cloudroute-gateway
+  namespace: cloudroute-lab
+  labels:
+    app.kubernetes.io/part-of: cloudroute-lab
+spec:
+  gatewayClassName: envoy-gateway
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: cloudroute-envoy-nodeport
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              cloudroute-lab/shared-gateway-access: "true"

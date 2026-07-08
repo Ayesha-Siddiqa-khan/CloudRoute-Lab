@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudroute-backend
+  namespace: cloudroute-lab
+  labels:
+    app: cloudroute-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cloudroute-backend
+  template:
+    metadata:
+      labels:
+        app: cloudroute-backend
+    spec:
+      containers:
+        - name: backend
+          image: REPLACE_WITH_ECR_REGISTRY/cloudroute-lab-backend:latest
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: cloudroute-config
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 20

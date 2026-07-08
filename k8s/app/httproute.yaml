@@ -1,0 +1,2 @@
+# HTTPRoute has been moved to k8s/gateway-api/httproute.yaml
+# See k8s/gateway-api/README.md for setup instructions.
