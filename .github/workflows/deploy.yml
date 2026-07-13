@@ -98,6 +98,12 @@ jobs:
         run: |
           kubectl apply -f k8s/app/namespace.yaml
           kubectl apply -f k8s/app/configmap.yaml
+          kubectl create secret docker-registry ecr-registry \
+            --namespace ${{ env.KUBE_NAMESPACE }} \
+            --docker-server=${{ env.ECR_REGISTRY }} \
+            --docker-username=AWS \
+            --docker-password="$(aws ecr get-login-password --region ${{ env.AWS_REGION }})" \
+            --dry-run=client -o yaml | kubectl apply -f -
           kubectl apply -f k8s/app/frontend-deployment.yaml
           kubectl apply -f k8s/app/frontend-service.yaml
           kubectl apply -f k8s/app/backend-deployment.yaml
@@ -127,8 +133,19 @@ jobs:
 
       - name: Verify deployment
         run: |
-          kubectl rollout status deployment/cloudroute-frontend -n ${{ env.KUBE_NAMESPACE }} --timeout=120s
-          kubectl rollout status deployment/cloudroute-backend -n ${{ env.KUBE_NAMESPACE }} --timeout=120s
+          kubectl rollout status deployment/cloudroute-frontend -n ${{ env.KUBE_NAMESPACE }} --timeout=300s
+          kubectl rollout status deployment/cloudroute-backend -n ${{ env.KUBE_NAMESPACE }} --timeout=300s
           kubectl get pods -n ${{ env.KUBE_NAMESPACE }}
           kubectl get gateway -n ${{ env.KUBE_NAMESPACE }}
           kubectl get httproute -n ${{ env.KUBE_NAMESPACE }}
+
+      - name: Debug Kubernetes deployment
+        if: failure()
+        run: |
+          kubectl get pods -n ${{ env.KUBE_NAMESPACE }} -o wide || true
+          kubectl describe deployment cloudroute-frontend -n ${{ env.KUBE_NAMESPACE }} || true
+          kubectl describe deployment cloudroute-backend -n ${{ env.KUBE_NAMESPACE }} || true
+          kubectl describe pods -n ${{ env.KUBE_NAMESPACE }} || true
+          kubectl get events -n ${{ env.KUBE_NAMESPACE }} --sort-by=.lastTimestamp || true
+          kubectl logs -n ${{ env.KUBE_NAMESPACE }} deployment/cloudroute-frontend --all-containers --tail=100 || true
+          kubectl logs -n ${{ env.KUBE_NAMESPACE }} deployment/cloudroute-backend --all-containers --tail=100 || true
