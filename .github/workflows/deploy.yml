@@ -104,6 +104,20 @@ jobs:
           kubectl apply -f k8s/app/backend-service.yaml
           kubectl apply -f k8s/app/external-api.yaml
 
+      - name: Install Gateway API controller
+        run: |
+          helm upgrade --install eg oci://docker.io/envoyproxy/gateway-helm \
+            --version v1.8.2 \
+            --namespace envoy-gateway-system \
+            --create-namespace \
+            --wait \
+            --timeout 5m
+
+          kubectl wait --for=condition=Established crd/gatewayclasses.gateway.networking.k8s.io --timeout=120s
+          kubectl wait --for=condition=Established crd/gateways.gateway.networking.k8s.io --timeout=120s
+          kubectl wait --for=condition=Established crd/httproutes.gateway.networking.k8s.io --timeout=120s
+          kubectl wait --for=condition=Established crd/envoyproxies.gateway.envoyproxy.io --timeout=120s
+
       - name: Apply Gateway API resources
         run: |
           kubectl apply -f k8s/gateway-api/gatewayclass.yaml
