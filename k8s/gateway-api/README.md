@@ -30,7 +30,7 @@ Envoy Gateway is lightweight and purpose-built for Gateway API.
 
 ```bash
 # Install Gateway API CRDs and Envoy Gateway with Helm
-helm install eg oci://docker.io/envoyproxy/gateway-helm --version v1.8.2 -n envoy-gateway-system --create-namespace
+helm install eg oci://docker.io/envoyproxy/gateway-helm --version v1.2.6 -n envoy-gateway-system --create-namespace
 
 # Verify installation
 kubectl get gatewayclass

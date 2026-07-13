@@ -324,7 +324,7 @@ docker build -t cloudroute-lab-backend:latest ./cloudroute-lab-backend
 Install Gateway API CRDs and Envoy Gateway first:
 
 ```bash
-helm install eg oci://docker.io/envoyproxy/gateway-helm --version v1.8.2 -n envoy-gateway-system --create-namespace
+helm install eg oci://docker.io/envoyproxy/gateway-helm --version v1.2.6 -n envoy-gateway-system --create-namespace
 kubectl get gatewayclass
 kubectl get pods -n envoy-gateway-system
 ```

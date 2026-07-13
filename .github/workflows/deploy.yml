@@ -107,7 +107,7 @@ jobs:
       - name: Install Gateway API controller
         run: |
           helm upgrade --install eg oci://docker.io/envoyproxy/gateway-helm \
-            --version v1.8.2 \
+            --version v1.2.6 \
             --namespace envoy-gateway-system \
             --create-namespace \
             --wait \
