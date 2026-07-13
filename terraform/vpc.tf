@@ -98,7 +98,7 @@ resource "aws_eip" "nat" {
   domain = "vpc"
 
   tags = {
-    Name                   = "${var.project_name}-nat-eip-${count.index + 1}"
+    Name                   = "${local.resource_prefix}-nat-eip-${count.index + 1}"
     Project                = var.project_name
     TerraPilotProject      = var.project_name
     TerraPilotResourceType = "elastic-ip"
@@ -114,7 +114,7 @@ resource "aws_nat_gateway" "main" {
   subnet_id     = aws_subnet.public[count.index].id
 
   tags = {
-    Name                   = "${var.project_name}-nat-${count.index + 1}"
+    Name                   = "${local.resource_prefix}-nat-${count.index + 1}"
     Project                = var.project_name
     TerraPilotProject      = var.project_name
     TerraPilotResourceType = "nat-gateway"

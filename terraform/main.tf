@@ -16,10 +16,10 @@ provider "aws" {
   region = var.region
   default_tags {
     tags = {
-      Project           = "CloudRoute Lab"
-      Environment       = "dev"
+      Project           = var.project_name
+      Environment       = var.environment
       ManagedBy         = "TerraPilot"
-      TerraPilotProject = "CloudRoute Lab"
+      TerraPilotProject = var.project_name
     }
   }
 }
@@ -29,5 +29,7 @@ resource "random_id" "suffix" {
 }
 
 locals {
-  resource_prefix = (var.project_name == var.environment || endswith(var.project_name, "-dev")) ? var.project_name : "${var.project_name}-${var.environment}"
+  project_slug     = trim(replace(lower(var.project_name), "/[^0-9a-z-]/", "-"), "-")
+  environment_slug = trim(replace(lower(var.environment), "/[^0-9a-z-]/", "-"), "-")
+  resource_prefix  = (local.project_slug == local.environment_slug || endswith(local.project_slug, "-${local.environment_slug}")) ? local.project_slug : "${local.project_slug}-${local.environment_slug}"
 }

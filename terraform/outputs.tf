@@ -143,6 +143,11 @@ output "user_data_cloudwatch_log_group" {
   value       = aws_cloudwatch_log_group.terrapilot_user_data.name
 }
 
+output "resource_name_prefix" {
+  description = "Sanitized prefix used for AWS resource names"
+  value       = local.resource_prefix
+}
+
 output "ecr_repository_url" {
   description = "Backward-compatible backend ECR repository URL"
   value       = local.ecr_repository_url

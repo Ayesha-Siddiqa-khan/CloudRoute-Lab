@@ -431,8 +431,8 @@ locals {
 
 
 locals {
-  terrapilot_ssm_join_private_path = "/terrapilot/${var.project_name}/${var.environment}/kubernetes/join-command/private"
-  terrapilot_ssm_join_public_path  = "/terrapilot/${var.project_name}/${var.environment}/kubernetes/join-command/public"
+  terrapilot_ssm_join_private_path = "/terrapilot/${local.project_slug}/${local.environment_slug}/kubernetes/join-command/private"
+  terrapilot_ssm_join_public_path  = "/terrapilot/${local.project_slug}/${local.environment_slug}/kubernetes/join-command/public"
   terrapilot_ssm_auto_join_enabled = true
 }
 
@@ -473,7 +473,7 @@ resource "aws_iam_policy" "terrapilot_worker_join_ssm" {
           "ssm:GetParameter",
           "ssm:GetParameters"
         ]
-        Resource = "arn:aws:ssm:*:*:parameter/terrapilot/${var.project_name}/${var.environment}/*"
+        Resource = "arn:aws:ssm:*:*:parameter/terrapilot/${local.project_slug}/${local.environment_slug}/*"
       }
     ]
   })
@@ -527,7 +527,7 @@ resource "aws_iam_role_policy_attachment" "terrapilot_bootstrap_s3_access" {
 
 
 resource "aws_cloudwatch_log_group" "terrapilot_user_data" {
-  name              = "/terrapilot/${var.project_name}/${var.environment}/user-data"
+  name              = "/terrapilot/${local.project_slug}/${local.environment_slug}/user-data"
   retention_in_days = 7
 
   tags = {
@@ -563,7 +563,7 @@ resource "aws_iam_policy" "terrapilot_user_data_cloudwatch_logs" {
 }
 
 resource "aws_cloudwatch_log_group" "kubernetes_container_logs" {
-  name              = "/cloudroute-lab/${var.environment}/kubernetes/containers"
+  name              = "/${local.project_slug}/${local.environment_slug}/kubernetes/containers"
   retention_in_days = 14
 
   tags = {

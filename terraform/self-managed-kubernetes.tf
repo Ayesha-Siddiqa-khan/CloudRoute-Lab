@@ -2,7 +2,7 @@
 # Worker EC2 instances are targeted by the NLB.
 
 locals {
-  postgres_backup_bucket_name = var.postgres_backup_bucket_name != "" ? var.postgres_backup_bucket_name : substr(lower(replace("${var.project_name}-${var.environment}-postgres-backups-${random_id.suffix.hex}", "_", "-")), 0, 63)
+  postgres_backup_bucket_name = var.postgres_backup_bucket_name != "" ? var.postgres_backup_bucket_name : substr("${local.resource_prefix}-postgres-backups-${random_id.suffix.hex}", 0, 63)
 }
 
 resource "aws_security_group" "ingress_nginx_nodeports" {

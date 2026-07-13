@@ -403,6 +403,11 @@ variable "github_repository" {
   description = "GitHub repository allowed to assume the generated OIDC role, in OWNER/REPO format"
   type        = string
   default     = ""
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$", var.github_repository))
+    error_message = "github_repository must be set in OWNER/REPO format, for example Ayesha-Siddiqa-khan/CloudRoute-Lab. Leaving it empty creates an invalid GitHub Actions OIDC trust policy."
+  }
 }
 
 variable "github_branch" {
@@ -449,8 +454,8 @@ variable "ec2_instances" {
       "role" : "kubernetes-master"
     },
     {
-      "name" : "t3-medium",
-      "instance_type" : "t3.medium",
+      "name" : "t3-small",
+      "instance_type" : "t3.small",
       "quantity" : 1,
       "subnet_type" : "public",
       "associate_public_ip" : true,

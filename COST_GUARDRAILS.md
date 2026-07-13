@@ -36,9 +36,9 @@ TerraPilot uses exact AWS EC2 instance type names in Terraform. Do not rename or
 Selected instance types:
 
 - `c7i-flex.large` (1 selected for c7i-flex-large)
-- `t3.medium` (1 selected for t3-medium)
+- `t3.small` (1 selected for t3-small worker)
 
-For beginner testing, start with Free Tier or low-cost instances such as `t3.micro`, `t3.small`, `t4g.micro`, or `t4g.small` when the selected AMI architecture matches. `c7i-flex.large` and `m7i-flex.large` can be Free Tier eligible for newer AWS account plans, but you must confirm account, Region, AMI, operating system, and monthly usage eligibility in AWS Billing or the EC2 console.
+For beginner testing, start with Free Tier or low-cost instances such as `t3.micro`, `t3.small`, `t4g.micro`, or `t4g.small` when the selected AMI architecture matches. If AWS rejects an instance type with `InvalidParameterCombination` and mentions Free Tier eligibility, switch that node to an instance type returned by the `free-tier-eligible=true` command below.
 
 Free Tier eligibility can depend on account plan, account age, Region, AMI, operating system, and usage. A type marked Free Tier Eligible is not a guarantee that a long-running workload will be free.
 
