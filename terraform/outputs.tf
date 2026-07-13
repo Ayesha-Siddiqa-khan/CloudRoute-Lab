@@ -211,6 +211,11 @@ output "gateway_http_node_port" {
   value       = var.gateway_http_node_port
 }
 
+output "kubernetes_api_allowed_cidrs" {
+  description = "CIDR blocks allowed to reach the Kubernetes API server on TCP 6443"
+  value       = var.kubernetes_api_allowed_cidrs
+}
+
 
 output "kubernetes_ingress_nlb_dns_name" {
   description = "DNS name of the optional legacy public Network Load Balancer"
