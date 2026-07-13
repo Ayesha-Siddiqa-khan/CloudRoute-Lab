@@ -429,6 +429,8 @@ Required GitHub variables:
 
 The workflow triggers on push to `main`, builds both Docker images, pushes immutable commit SHA tags to ECR, applies app and Gateway API manifests, and verifies rollout.
 
+For GitHub-hosted runners, the Kubernetes API public endpoint must be reachable on TCP `6443`. In this lab, `terraform.tfvars` sets `kubernetes_api_allowed_cidrs = ["10.0.0.0/16", "0.0.0.0/0"]` so Actions can connect. For production, remove `0.0.0.0/0` and use a self-hosted runner inside the VPC or a tightly trusted CIDR.
+
 ### Validation Commands
 
 ```bash

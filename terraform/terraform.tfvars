@@ -15,6 +15,7 @@ existing_security_group_ids                = []
 use_default_security_group_for_ec2         = false
 enable_ssh_security_group                  = true
 enable_k8s_api_security_group              = true
+kubernetes_api_allowed_cidrs               = ["10.0.0.0/16", "0.0.0.0/0"]
 enable_etcd_security_group                 = true
 enable_kubelet_security_group              = true
 enable_calico_vxlan_security_group         = true

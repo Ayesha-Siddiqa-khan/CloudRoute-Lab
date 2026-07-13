@@ -149,6 +149,12 @@ variable "enable_k8s_api_security_group" {
   default     = true
 }
 
+variable "kubernetes_api_allowed_cidrs" {
+  description = "CIDR blocks allowed to reach the Kubernetes API server on TCP 6443. For GitHub-hosted Actions, 0.0.0.0/0 is the simple lab option; for production, use a self-hosted runner in the VPC or trusted CIDRs only."
+  type        = list(string)
+  default     = ["10.0.0.0/16"]
+}
+
 variable "enable_etcd_security_group" {
   description = "Create generated etcd security group"
   type        = bool
