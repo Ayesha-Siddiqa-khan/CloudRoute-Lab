@@ -3,6 +3,7 @@
 resource "aws_ecr_repository" "main_1" {
   name                 = var.ecr_repository_name_1
   image_tag_mutability = var.ecr_image_tag_mutability_1
+  force_delete         = true
 
   image_scanning_configuration {
     scan_on_push = var.ecr_scan_on_push_1
@@ -45,6 +46,7 @@ resource "aws_ecr_lifecycle_policy" "main_1" {
 resource "aws_ecr_repository" "main_2" {
   name                 = var.ecr_repository_name_2
   image_tag_mutability = var.ecr_image_tag_mutability_2
+  force_delete         = true
 
   image_scanning_configuration {
     scan_on_push = var.ecr_scan_on_push_2
