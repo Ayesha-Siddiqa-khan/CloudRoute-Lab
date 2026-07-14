@@ -4,6 +4,7 @@ set -Eeuo pipefail
 export AWS_REGION="${aws_region}"
 export TERRAPILOT_SSM_JOIN_PRIVATE_PATH="${ssm_join_private_path}"
 export TERRAPILOT_SSM_JOIN_PUBLIC_PATH="${ssm_join_public_path}"
+export TERRAPILOT_SSM_KUBECONFIG_PUBLIC_B64_PATH="${ssm_kubeconfig_public_b64_path}"
 
 LOG_FILE="/var/log/terrapilot-userdata.log"
 STATUS_DIR="/opt/terrapilot/status"
@@ -322,6 +323,34 @@ put_ssm_parameter_with_retry() {
   local value="$2"
   local label="$3"
   retry_command 24 5 "Publish $label join command to SSM Parameter Store"     aws ssm put-parameter --name "$path" --type "SecureString" --value "$value" --overwrite --region "$${AWS_REGION}"     || fail "Unable to publish $label join command to SSM Parameter Store. Check the EC2 instance profile has ssm:PutParameter for $path."
+}
+
+publish_public_kubeconfig_to_ssm() {
+  local ssm_path="$${TERRAPILOT_SSM_KUBECONFIG_PUBLIC_B64_PATH:-}"
+
+  if [ -z "$ssm_path" ]; then
+    log "No SSM kubeconfig path configured; skipping public kubeconfig publish."
+    return 0
+  fi
+
+  if [ ! -f /home/ubuntu/kubeconfig-public.b64 ]; then
+    log "Public kubeconfig base64 file is missing; skipping SSM publish."
+    return 0
+  fi
+
+  local kubeconfig_b64
+  kubeconfig_b64="$(cat /home/ubuntu/kubeconfig-public.b64)"
+  retry_command 24 5 "Publish public kubeconfig to SSM Parameter Store" \
+    aws ssm put-parameter \
+      --name "$ssm_path" \
+      --type "SecureString" \
+      --tier "Advanced" \
+      --value "$kubeconfig_b64" \
+      --overwrite \
+      --region "$${AWS_REGION}" \
+    || fail "Unable to publish public kubeconfig to SSM Parameter Store. Check the EC2 instance profile has ssm:PutParameter for $ssm_path."
+
+  log "Published public kubeconfig to SSM Parameter Store: $ssm_path"
 }
 
 write_join_command_to_ssm() {
@@ -1081,6 +1110,7 @@ TERRAPILOT_COMMANDS
   generate_kubeconfigs "$PRIVATE_IP" "$PUBLIC_IP"
   generate_kubeconfig_base64_exports "$PRIVATE_IP" "$PUBLIC_IP"
   generate-kubeconfig-github || log "WARNING: GitHub kubeconfig helper generation failed. User can run it manually later."
+  publish_public_kubeconfig_to_ssm
   [ -f /home/ubuntu/.kube/config ] || fail "master kubeconfig missing at /home/ubuntu/.kube/config"
   wait_for_api
   sudo -H -u ubuntu KUBECONFIG=/home/ubuntu/.kube/config kubectl get nodes || fail "kubectl get nodes failed with generated kubeconfig"

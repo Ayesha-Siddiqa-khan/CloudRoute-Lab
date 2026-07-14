@@ -9,6 +9,7 @@ env:
   ECR_REGISTRY: ${{ vars.ECR_REGISTRY }}
   ECR_REPOSITORY_FRONTEND: ${{ vars.FRONTEND_IMAGE_NAME || 'cloudroute-lab-frontend' }}
   ECR_REPOSITORY_BACKEND: ${{ vars.BACKEND_IMAGE_NAME || 'cloudroute-lab-backend' }}
+  KUBE_CONFIG_SSM_PARAMETER: ${{ vars.KUBE_CONFIG_SSM_PARAMETER || '/terrapilot/cloudroute-lab/dev/kubernetes/kubeconfig/public-b64' }}
   KUBE_NAMESPACE: cloudroute-lab
 
 jobs:
@@ -83,9 +84,27 @@ jobs:
           KUBE_CONFIG_B64: ${{ secrets.KUBE_CONFIG_DATA || secrets.KUBE_CONFIG }}
         run: |
           mkdir -p $HOME/.kube
-          test -n "$KUBE_CONFIG_B64"
+          if aws ssm get-parameter \
+            --name "${{ env.KUBE_CONFIG_SSM_PARAMETER }}" \
+            --with-decryption \
+            --query 'Parameter.Value' \
+            --output text > /tmp/kubeconfig.b64 2>/tmp/kubeconfig-ssm.err; then
+            KUBE_CONFIG_B64="$(cat /tmp/kubeconfig.b64)"
+            echo "Using kubeconfig from SSM Parameter Store: ${{ env.KUBE_CONFIG_SSM_PARAMETER }}"
+          elif [ -n "$KUBE_CONFIG_B64" ]; then
+            echo "WARNING: SSM kubeconfig was not available; using fallback GitHub secret KUBE_CONFIG_DATA."
+            cat /tmp/kubeconfig-ssm.err
+          else
+            echo "ERROR: No kubeconfig found in SSM or GitHub secrets."
+            cat /tmp/kubeconfig-ssm.err
+            exit 1
+          fi
           echo "$KUBE_CONFIG_B64" | base64 -d > $HOME/.kube/config
           chmod 600 $HOME/.kube/config
+          echo "Kubernetes API endpoint from kubeconfig:"
+          kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}'
+          echo
+          kubectl version --request-timeout=15s
 
       - name: Update image tags in manifests
         run: |

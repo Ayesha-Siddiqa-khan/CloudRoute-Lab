@@ -4,6 +4,7 @@ set -Eeuo pipefail
 export AWS_REGION="${aws_region}"
 export TERRAPILOT_SSM_JOIN_PRIVATE_PATH="${ssm_join_private_path}"
 export TERRAPILOT_SSM_JOIN_PUBLIC_PATH="${ssm_join_public_path}"
+export TERRAPILOT_SSM_KUBECONFIG_PUBLIC_B64_PATH="${ssm_kubeconfig_public_b64_path}"
 export TERRAPILOT_SSM_AUTO_JOIN_ENABLED="${ssm_auto_join_enabled}"
 export TERRAPILOT_KAGENT_ENABLED="${kagent_enabled}"
 export TERRAPILOT_KAGENT_PROVIDER="${kagent_provider}"

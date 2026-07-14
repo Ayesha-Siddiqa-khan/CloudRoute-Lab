@@ -186,6 +186,7 @@ output "github_actions_variables" {
     ECR_REPOSITORY_FRONTEND     = var.ecr_repository_name_2
     BACKEND_ECR_REPOSITORY_URL  = local.backend_ecr_repository_url
     FRONTEND_ECR_REPOSITORY_URL = local.frontend_ecr_repository_url
+    KUBE_CONFIG_SSM_PARAMETER   = local.terrapilot_ssm_kubeconfig_public_b64_path
     GITHUB_REPOSITORY           = var.github_repository
     GITHUB_BRANCH               = var.github_branch
   }
@@ -214,6 +215,11 @@ output "gateway_http_node_port" {
 output "kubernetes_api_allowed_cidrs" {
   description = "CIDR blocks allowed to reach the Kubernetes API server on TCP 6443"
   value       = var.kubernetes_api_allowed_cidrs
+}
+
+output "kubeconfig_public_b64_ssm_parameter" {
+  description = "SSM SecureString parameter where the control plane publishes the current public kubeconfig base64 for GitHub Actions"
+  value       = local.terrapilot_ssm_kubeconfig_public_b64_path
 }
 
 

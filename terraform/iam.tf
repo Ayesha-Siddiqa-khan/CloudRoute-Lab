@@ -66,6 +66,30 @@ resource "aws_iam_role_policy_attachment" "github_actions_ecr_push" {
   policy_arn = aws_iam_policy.github_actions_ecr_push.arn
 }
 
+resource "aws_iam_policy" "github_actions_kubeconfig_ssm_read" {
+  name        = "${local.resource_prefix}-github-actions-kubeconfig-ssm"
+  description = "Allow GitHub Actions to read the current public Kubernetes kubeconfig from SSM Parameter Store."
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "AllowReadCurrentPublicKubeconfig"
+        Effect = "Allow"
+        Action = [
+          "ssm:GetParameter"
+        ]
+        Resource = "arn:aws:ssm:${var.region}:${data.aws_caller_identity.current.account_id}:parameter${local.terrapilot_ssm_kubeconfig_public_b64_path}"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "github_actions_kubeconfig_ssm_read" {
+  role       = aws_iam_role.github_actions_oidc.name
+  policy_arn = aws_iam_policy.github_actions_kubeconfig_ssm_read.arn
+}
+
 
 # Generated worker role: EC2 worker nodes pull Docker images from ECR.
 resource "aws_iam_role" "worker_ec2_ecr_pull" {
