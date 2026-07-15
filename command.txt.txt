@@ -1,0 +1,46 @@
+6. Suggested Deployment Order
+
+Week 1-2: Foundation
+├── 1. Create Namespace
+├── 2. Build Docker images (frontend + backend)
+├── 3. Create ConfigMaps
+├── 4. Deploy backend Deployment + ClusterIP Service
+├── 5. Deploy frontend Deployment + ClusterIP Service
+├── 6. Verify: kubectl port-forward, test health endpoint
+└── 7. Practice: Scale replicas, exec into pods, check logs
+
+Week 3: Service Types
+├── 8. Create NodePort service for backend
+├── 9. Access backend via <node-ip>:30080
+├── 10. Create ExternalName service (external-api.local → httpbin.org)
+└── 11. Verify backend resolves ExternalName via DNS
+
+Week 4: Gateway API
+├── 12. Install Gateway API controller (Envoy Gateway)
+├── 13. Create Gateway resource
+├── 14. Create HTTPRoute (/api → backend, / → frontend)
+└── 15. Verify external traffic routing
+
+Week 5: Stateful Workloads
+├── 16. Create PersistentVolumeClaim
+├── 17. Create headless Service for StatefulSet
+├── 18. Create StatefulSet (PostgreSQL)
+├── 19. Update backend Deployment with init container (wait-for-db)
+└── 20. Verify stable pod names and persistent storage
+
+Week 6: Monitoring
+├── 21. Install Prometheus (Helm or raw manifests)
+├── 22. Install Grafana
+├── 23. Create DaemonSet (log collector on every node)
+└── 24. Create Grafana dashboards
+
+Week 7: Advanced Patterns
+├── 25. Add sidecar container to backend pod
+├── 26. Verify log sharing via shared volume
+└── 27. Practice init containers with different scenarios
+
+Week 8: CI/CD
+├── 28. Create GitHub Actions workflow
+├── 29. Build + push images to container registry
+├── 30. Deploy to cluster via kubectl
+└── 31. Add secrets management
