@@ -23,7 +23,7 @@ Open `http://localhost:3000` in your browser.
 
 | Variable                 | Default                  | Description                          |
 |--------------------------|--------------------------|--------------------------------------|
-| `NEXT_PUBLIC_API_BASE_URL` | `http://localhost:8000`  | FastAPI backend base URL             |
+| `NEXT_PUBLIC_API_BASE_URL` | `/api`                   | Browser API base path routed by Gateway API |
 
 ## Project Structure
 

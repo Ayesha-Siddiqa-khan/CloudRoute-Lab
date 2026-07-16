@@ -8,7 +8,12 @@ metadata:
 spec:
   replicas: 1
   strategy:
-    type: Recreate
+    # This small lab has one memory-constrained worker. Avoid surge pods during rollout.
+    # A deploy can briefly interrupt frontend traffic, but it avoids Insufficient memory failures.
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
   selector:
     matchLabels:
       app: cloudroute-frontend

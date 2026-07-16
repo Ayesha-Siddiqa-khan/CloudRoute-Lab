@@ -27,6 +27,7 @@ def ready():
     return {"status": "ready", "environment": APP_ENV}
 
 
+@app.get("/status")
 @app.get("/api/status")
 def status():
     return {
@@ -37,6 +38,7 @@ def status():
     }
 
 
+@app.get("/concepts/services")
 @app.get("/api/concepts/services")
 def services():
     return {
@@ -69,6 +71,7 @@ def services():
     }
 
 
+@app.get("/concepts/workloads")
 @app.get("/api/concepts/workloads")
 def workloads():
     return {
@@ -113,6 +116,7 @@ def workloads():
     }
 
 
+@app.get("/traffic-flow")
 @app.get("/api/traffic-flow")
 def traffic_flow():
     return {

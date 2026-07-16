@@ -90,6 +90,28 @@ resource "aws_iam_role_policy_attachment" "github_actions_kubeconfig_ssm_read" {
   policy_arn = aws_iam_policy.github_actions_kubeconfig_ssm_read.arn
 }
 
+resource "aws_iam_policy" "github_actions_backup_bucket_discovery" {
+  name        = "${local.resource_prefix}-github-actions-backup-bucket-discovery"
+  description = "Allow GitHub Actions to discover the generated PostgreSQL backup bucket when a GitHub variable is not set."
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid      = "AllowListBucketsForBackupDiscovery"
+        Effect   = "Allow"
+        Action   = ["s3:ListAllMyBuckets"]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "github_actions_backup_bucket_discovery" {
+  role       = aws_iam_role.github_actions_oidc.name
+  policy_arn = aws_iam_policy.github_actions_backup_bucket_discovery.arn
+}
+
 
 # Generated worker role: EC2 worker nodes pull Docker images from ECR.
 resource "aws_iam_role" "worker_ec2_ecr_pull" {

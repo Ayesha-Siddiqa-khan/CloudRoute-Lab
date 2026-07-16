@@ -187,6 +187,8 @@ output "github_actions_variables" {
     BACKEND_ECR_REPOSITORY_URL  = local.backend_ecr_repository_url
     FRONTEND_ECR_REPOSITORY_URL = local.frontend_ecr_repository_url
     KUBE_CONFIG_SSM_PARAMETER   = local.terrapilot_ssm_kubeconfig_public_b64_path
+    POSTGRES_BACKUP_BUCKET      = aws_s3_bucket.postgres_backups.id
+    POSTGRES_BACKUP_PREFIX      = var.postgres_backup_prefix
     GITHUB_REPOSITORY           = var.github_repository
     GITHUB_BRANCH               = var.github_branch
   }

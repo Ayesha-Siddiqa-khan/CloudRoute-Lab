@@ -27,9 +27,11 @@ API docs available at `http://localhost:8000/docs`.
 |--------|---------------------------|----------------------------------|
 | GET    | `/health`                 | Health check                     |
 | GET    | `/api/status`             | Application status               |
-| GET    | `/api/concepts/services`  | Kubernetes service types         |
-| GET    | `/api/concepts/workloads` | Kubernetes workloads & patterns  |
-| GET    | `/api/traffic-flow`       | Traffic flow steps               |
+| GET    | `/concepts/services`      | Kubernetes service types         |
+| GET    | `/concepts/workloads`     | Kubernetes workloads & patterns  |
+| GET    | `/traffic-flow`           | Traffic flow steps               |
+
+The legacy `/api/...` paths are still available inside the backend, but the Kubernetes Gateway strips `/api` before forwarding browser traffic.
 
 ## Environment Variables
 

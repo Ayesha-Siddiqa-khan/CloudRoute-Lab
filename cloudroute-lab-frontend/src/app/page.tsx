@@ -34,9 +34,9 @@ export default function Home() {
       try {
         const [healthRes, trafficRes, servicesRes, workloadsRes] = await Promise.all([
           fetch(`${API_BASE}/health`),
-          fetch(`${API_BASE}/api/traffic-flow`),
-          fetch(`${API_BASE}/api/concepts/services`),
-          fetch(`${API_BASE}/api/concepts/workloads`),
+          fetch(`${API_BASE}/traffic-flow`),
+          fetch(`${API_BASE}/concepts/services`),
+          fetch(`${API_BASE}/concepts/workloads`),
         ]);
 
         if (!healthRes.ok || !trafficRes.ok || !servicesRes.ok || !workloadsRes.ok) {

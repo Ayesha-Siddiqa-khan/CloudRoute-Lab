@@ -25,14 +25,23 @@ spec:
       backendRefs:
         - name: cloudroute-backend
           port: 8000
-    # Route /api requests to backend
+    # Strip /api before forwarding so /api/health reaches FastAPI as /health.
     - matches:
         - path:
             type: PathPrefix
             value: /api
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /
       backendRefs:
-        - name: cloudroute-backend
+        - group: ""
+          kind: Service
+          name: cloudroute-backend
           port: 8000
+          weight: 1
     # Route all other requests to frontend
     - matches:
         - path:
