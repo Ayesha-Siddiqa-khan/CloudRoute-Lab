@@ -23,6 +23,14 @@ resource "aws_security_group" "ec2_consolidated" {
   }
 
   ingress {
+    description = "Kubernetes Pod Network"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = [var.kubernetes_pod_cidr]
+  }
+
+  ingress {
     description = "etcd"
     from_port   = 2379
     to_port     = 2380
@@ -147,7 +155,7 @@ locals {
     try(aws_security_group.ec2_consolidated[0].id, null),
   ])
 
-  generated_ec2_security_group_rule_count = 14
+  generated_ec2_security_group_rule_count = 15
 
   ec2_security_group_ids = (
     var.ec2_security_group_attachment_mode == "generated" ? local.generated_ec2_security_group_ids :

@@ -20,6 +20,13 @@ spec:
         app.kubernetes.io/name: fluent-bit
     spec:
       serviceAccountName: fluent-bit
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+        - key: node-role.kubernetes.io/master
+          operator: Exists
+          effect: NoSchedule
       containers:
         - name: fluent-bit
           image: public.ecr.aws/aws-observability/aws-for-fluent-bit:stable
@@ -29,10 +36,10 @@ spec:
           resources:
             requests:
               cpu: 50m
-              memory: 64Mi
+              memory: 32Mi
             limits:
               cpu: 200m
-              memory: 256Mi
+              memory: 128Mi
           env:
             - name: AWS_REGION
               valueFrom:

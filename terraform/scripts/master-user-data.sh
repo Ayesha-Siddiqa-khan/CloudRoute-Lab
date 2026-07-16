@@ -173,6 +173,11 @@ install_calico() {
     dump_calico_diagnostics
     fail "Calico custom resources failed to apply."
   }
+  wait_for_crd ippools.projectcalico.org
+  retry_command 12 10 "Configure Calico VXLAN encapsulation for AWS" run_as_ubuntu kubectl patch installation default --type merge -p '{"spec":{"calicoNetwork":{"ipPools":[{"name":"default-ipv4-ippool","cidr":"192.168.0.0/16","encapsulation":"VXLAN","natOutgoing":"Enabled","nodeSelector":"all()"}]}}}' || {
+    dump_calico_diagnostics
+    fail "Calico VXLAN configuration failed to apply."
+  }
 
   log "Waiting for Calico/Tigera pods to become Running and Ready..."
   for i in {1..120}; do

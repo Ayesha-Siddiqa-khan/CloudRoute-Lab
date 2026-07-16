@@ -7,6 +7,8 @@ metadata:
     app: cloudroute-frontend
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: cloudroute-frontend
@@ -15,6 +17,7 @@ spec:
       labels:
         app: cloudroute-frontend
     spec:
+      hostNetwork: false
       imagePullSecrets:
         - name: ecr-registry
       containers:

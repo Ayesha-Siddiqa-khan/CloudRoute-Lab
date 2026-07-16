@@ -155,6 +155,12 @@ variable "kubernetes_api_allowed_cidrs" {
   default     = ["10.0.0.0/16"]
 }
 
+variable "kubernetes_pod_cidr" {
+  description = "Kubernetes pod network CIDR used by kubeadm/Calico. EC2 security groups must allow this for pod-to-pod traffic across nodes."
+  type        = string
+  default     = "192.168.0.0/16"
+}
+
 variable "enable_etcd_security_group" {
   description = "Create generated etcd security group"
   type        = bool

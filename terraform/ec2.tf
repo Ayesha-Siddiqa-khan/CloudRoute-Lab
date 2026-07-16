@@ -736,8 +736,9 @@ resource "aws_instance" "main" {
   iam_instance_profile = each.value.role == "kubernetes-worker" ? aws_iam_instance_profile.worker_ec2_ecr_pull.name : aws_iam_instance_profile.terrapilot_ec2_userdata.name
 
   metadata_options {
-    http_endpoint = "enabled"
-    http_tokens   = "required"
+    http_endpoint               = "enabled"
+    http_tokens                 = "required"
+    http_put_response_hop_limit = 2
   }
 
   root_block_device {

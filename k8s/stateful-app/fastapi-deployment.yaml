@@ -13,6 +13,8 @@ spec:
       labels:
         app: fastapi
     spec:
+      imagePullSecrets:
+        - name: ecr-registry
       containers:
         - name: fastapi
           image: __ECR_REPOSITORY_URL__:latest # Terraform output ecr_repository_url points to cloudroute-lab-backend

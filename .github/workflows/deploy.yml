@@ -11,6 +11,7 @@ env:
   ECR_REPOSITORY_BACKEND: ${{ vars.BACKEND_IMAGE_NAME || 'cloudroute-lab-backend' }}
   KUBE_CONFIG_SSM_PARAMETER: ${{ vars.KUBE_CONFIG_SSM_PARAMETER || '/terrapilot/cloudroute-lab/dev/kubernetes/kubeconfig/public-b64' }}
   KUBE_NAMESPACE: cloudroute-lab
+  POSTGRES_BACKUP_PREFIX: postgres-backups
 
 jobs:
   build-and-push:
@@ -112,6 +113,8 @@ jobs:
           sed -i "s|REPLACE_WITH_ECR_REGISTRY|${{ env.ECR_REGISTRY }}|g" k8s/app/backend-deployment.yaml
           sed -i "s|:latest|:${{ github.sha }}|g" k8s/app/frontend-deployment.yaml
           sed -i "s|:latest|:${{ github.sha }}|g" k8s/app/backend-deployment.yaml
+          sed -i "s|__ECR_REPOSITORY_URL__|${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_BACKEND }}|g" k8s/stateful-app/fastapi-deployment.yaml
+          sed -i "s|:latest|:${{ github.sha }}|g" k8s/stateful-app/fastapi-deployment.yaml
 
       - name: Apply Kubernetes manifests
         run: |
@@ -128,6 +131,104 @@ jobs:
           kubectl apply -f k8s/app/backend-deployment.yaml
           kubectl apply -f k8s/app/backend-service.yaml
           kubectl apply -f k8s/app/external-api.yaml
+
+      - name: Install EBS CSI driver
+        run: |
+          helm repo add aws-ebs-csi-driver https://kubernetes-sigs.github.io/aws-ebs-csi-driver
+          helm repo update
+          helm upgrade --install aws-ebs-csi-driver aws-ebs-csi-driver/aws-ebs-csi-driver \
+            --namespace kube-system \
+            --set controller.replicaCount=1 \
+            --wait \
+            --timeout 10m
+          kubectl rollout status deployment/ebs-csi-controller -n kube-system --timeout=300s
+          kubectl rollout status daemonset/ebs-csi-node -n kube-system --timeout=300s
+
+      - name: Apply gp3 storage lab
+        run: |
+          kubectl apply -f k8s/storage/gp3-storageclass.yaml
+          kubectl apply -f k8s/storage/pvc-test.yaml
+
+      - name: Apply monitoring and logging stack
+        env:
+          GRAFANA_ADMIN_PASSWORD: ${{ secrets.GRAFANA_ADMIN_PASSWORD || 'cloudroute-lab-grafana-admin' }}
+        run: |
+          kubectl apply -f k8s/monitoring/namespace.yaml
+          kubectl create secret generic grafana-admin \
+            --namespace monitoring \
+            --from-literal=admin-password="$GRAFANA_ADMIN_PASSWORD" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          kubectl apply -f k8s/monitoring/prometheus-serviceaccount.yaml
+          kubectl apply -f k8s/monitoring/prometheus-clusterrole.yaml
+          kubectl apply -f k8s/monitoring/prometheus-clusterrolebinding.yaml
+          kubectl apply -f k8s/monitoring/prometheus-configmap.yaml
+          kubectl apply -f k8s/monitoring/prometheus-deployment.yaml
+          kubectl apply -f k8s/monitoring/prometheus-service.yaml
+
+          kubectl apply -f k8s/monitoring/grafana-datasources.yaml
+          kubectl apply -f k8s/monitoring/grafana-deployment.yaml
+          kubectl apply -f k8s/monitoring/grafana-service.yaml
+
+          kubectl apply -f k8s/monitoring/fluent-bit-serviceaccount.yaml
+          kubectl apply -f k8s/monitoring/fluent-bit-clusterrole.yaml
+          kubectl apply -f k8s/monitoring/fluent-bit-clusterrolebinding.yaml
+          kubectl apply -f k8s/monitoring/fluent-bit-configmap.yaml
+          kubectl apply -f k8s/monitoring/node-exporter-daemonset.yaml
+          kubectl apply -f k8s/monitoring/fluent-bit-daemonset.yaml
+
+      - name: Apply stateful app lab
+        env:
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD || 'cloudroute-lab-postgres-password' }}
+          FASTAPI_SECRET_KEY: ${{ secrets.FASTAPI_SECRET_KEY || 'cloudroute-lab-fastapi-secret' }}
+          POSTGRES_BACKUP_BUCKET: ${{ vars.POSTGRES_BACKUP_BUCKET || vars.POSTGRES_BACKUP_BUCKET_NAME }}
+        run: |
+          kubectl apply -f k8s/stateful-app/namespace.yaml
+
+          if [ -z "$POSTGRES_BACKUP_BUCKET" ]; then
+            POSTGRES_BACKUP_BUCKET="$(aws s3api list-buckets \
+              --query "Buckets[?starts_with(Name, 'cloudroute-lab-dev-postgres-backups-')].Name | [0]" \
+              --output text)"
+          fi
+          if [ -z "$POSTGRES_BACKUP_BUCKET" ] || [ "$POSTGRES_BACKUP_BUCKET" = "None" ]; then
+            echo "ERROR: Could not discover PostgreSQL backup S3 bucket. Set GitHub variable POSTGRES_BACKUP_BUCKET."
+            exit 1
+          fi
+          echo "Using PostgreSQL backup bucket: $POSTGRES_BACKUP_BUCKET"
+
+          kubectl create secret docker-registry ecr-registry \
+            --namespace stateful-app \
+            --docker-server=${{ env.ECR_REGISTRY }} \
+            --docker-username=AWS \
+            --docker-password="$(aws ecr get-login-password --region ${{ env.AWS_REGION }})" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          kubectl create secret generic postgres-secret \
+            --namespace stateful-app \
+            --from-literal=POSTGRES_DB=kubestate \
+            --from-literal=POSTGRES_USER=kubestate \
+            --from-literal=POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          kubectl create secret generic fastapi-secret \
+            --namespace stateful-app \
+            --from-literal=DATABASE_URL="postgresql://kubestate:${POSTGRES_PASSWORD}@postgres.stateful-app.svc.cluster.local:5432/kubestate" \
+            --from-literal=REDIS_URL="redis://redis.stateful-app.svc.cluster.local:6379/0" \
+            --from-literal=SECRET_KEY="$FASTAPI_SECRET_KEY" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          kubectl apply -f k8s/stateful-app/configmap.yaml
+          kubectl apply -f k8s/stateful-app/postgres-service.yaml
+          kubectl apply -f k8s/stateful-app/redis-service.yaml
+          kubectl apply -f k8s/stateful-app/postgres-statefulset.yaml
+          kubectl apply -f k8s/stateful-app/redis-statefulset.yaml
+          kubectl apply -f k8s/stateful-app/fastapi-deployment.yaml
+          kubectl apply -f k8s/stateful-app/fastapi-service.yaml
+
+          cp k8s/stateful-app/postgres-backup-cronjob.yaml /tmp/postgres-backup-cronjob.yaml
+          sed -i "s|REPLACE_WITH_TERRAFORM_OUTPUT_postgres_backup_bucket_name|${POSTGRES_BACKUP_BUCKET}|g" /tmp/postgres-backup-cronjob.yaml
+          sed -i "s|REPLACE_WITH_AWS_REGION|${{ env.AWS_REGION }}|g" /tmp/postgres-backup-cronjob.yaml
+          kubectl apply -f /tmp/postgres-backup-cronjob.yaml
 
       - name: Install Gateway API controller
         run: |
@@ -149,6 +250,7 @@ jobs:
           kubectl apply -f k8s/gateway-api/envoyproxy-nodeport.yaml
           kubectl apply -f k8s/gateway-api/gateway.yaml
           kubectl apply -f k8s/gateway-api/httproute.yaml
+          kubectl apply -f k8s/stateful-app/gateway-route.yaml
 
       - name: Verify deployment
         run: |
@@ -157,6 +259,18 @@ jobs:
           kubectl get pods -n ${{ env.KUBE_NAMESPACE }}
           kubectl get gateway -n ${{ env.KUBE_NAMESPACE }}
           kubectl get httproute -n ${{ env.KUBE_NAMESPACE }}
+          kubectl get httproute -n stateful-app
+          kubectl rollout status deployment/prometheus -n monitoring --timeout=300s
+          kubectl rollout status deployment/grafana -n monitoring --timeout=300s
+          kubectl rollout status daemonset/node-exporter -n monitoring --timeout=300s
+          kubectl rollout status daemonset/fluent-bit -n monitoring --timeout=300s
+          kubectl rollout status statefulset/postgres -n stateful-app --timeout=300s
+          kubectl rollout status statefulset/redis -n stateful-app --timeout=300s
+          kubectl rollout status deployment/fastapi -n stateful-app --timeout=300s
+          kubectl get pods -n monitoring -o wide
+          kubectl get pods -n stateful-app -o wide
+          kubectl get pvc -A
+          kubectl get svc -A
 
       - name: Debug Kubernetes deployment
         if: failure()
@@ -168,3 +282,13 @@ jobs:
           kubectl get events -n ${{ env.KUBE_NAMESPACE }} --sort-by=.lastTimestamp || true
           kubectl logs -n ${{ env.KUBE_NAMESPACE }} deployment/cloudroute-frontend --all-containers --tail=100 || true
           kubectl logs -n ${{ env.KUBE_NAMESPACE }} deployment/cloudroute-backend --all-containers --tail=100 || true
+          kubectl get pods -n monitoring -o wide || true
+          kubectl describe pods -n monitoring || true
+          kubectl get events -n monitoring --sort-by=.lastTimestamp || true
+          kubectl logs -n monitoring deployment/prometheus --all-containers --tail=100 || true
+          kubectl logs -n monitoring deployment/grafana --all-containers --tail=100 || true
+          kubectl logs -n monitoring daemonset/fluent-bit --all-containers --tail=100 || true
+          kubectl get pods -n stateful-app -o wide || true
+          kubectl get pvc -n stateful-app || true
+          kubectl describe pods -n stateful-app || true
+          kubectl get events -n stateful-app --sort-by=.lastTimestamp || true
