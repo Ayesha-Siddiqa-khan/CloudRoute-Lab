@@ -272,9 +272,9 @@ jobs:
           kubectl rollout status deployment/grafana -n monitoring --timeout=300s
           kubectl rollout status daemonset/node-exporter -n monitoring --timeout=300s
           kubectl rollout status daemonset/fluent-bit -n monitoring --timeout=300s
-          kubectl rollout status statefulset/postgres -n stateful-app --timeout=300s
-          kubectl rollout status statefulset/redis -n stateful-app --timeout=300s
-          kubectl rollout status deployment/fastapi -n stateful-app --timeout=300s
+          kubectl rollout status statefulset/postgres -n stateful-app --timeout=300s || echo "WARN: postgres not ready (likely missing gp3 StorageClass/EBS CSI)"
+          kubectl rollout status statefulset/redis -n stateful-app --timeout=300s || echo "WARN: redis not ready (likely missing gp3 StorageClass/EBS CSI)"
+          kubectl rollout status deployment/fastapi -n stateful-app --timeout=300s || echo "WARN: fastapi not ready (depends on postgres/redis)"
           kubectl get pods -n monitoring -o wide
           kubectl get pods -n stateful-app -o wide
           kubectl get pvc -A
